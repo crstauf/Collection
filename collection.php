@@ -236,8 +236,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @param mixed $item
 	 * @return bool
 	 */
-	function has_item( $item ) {
-		return in_array( $item, $this->items );
+	function contains( $item ) {
+		return in_array( $item, $this->get_items() );
 	}
 
 	/**
