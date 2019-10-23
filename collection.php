@@ -24,14 +24,14 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @var null|DateTime $expiration
 	 * @var null|callback $callback
 	 * @var array $items
-	 * @var bool|string $from_storage
+	 * @var string $source
 	 */
 	protected $key = '';
 	protected $created = null;
 	protected $expiration = null;
 	protected $callback = null;
 	protected $items = array();
-	protected $from_storage = false;
+	protected $source = 'runtime';
 
 	/**
 	 * Get transient name.
@@ -129,7 +129,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( !$in_cache )
 			return null;
 
-		$cached->from_storage = 'object_cache';
+		$cached->source = 'object_cache';
 
 		return $cached;
 	}
@@ -147,7 +147,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( empty( $transient ) )
 			return null;
 
-		$transient->from_storage = 'transient';
+		$transient->source = 'transient';
 
 		# Store in cache.
 		wp_cache_add( $key, $transient, __CLASS__ );
@@ -209,6 +209,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		);
 	}
 
+	/**
+	 * Set callback function to get items from.
+	 *
+	 * @param callable $callback
+	 */
 	protected function set_callback( callable $callback ) {
 		# Filter callback.
 		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
@@ -218,20 +223,47 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			$this->callback = '__return_empty_array';
 
 		# Check callback is callable.
-		if ( !is_callable( $this->callback ) ) {
-			trigger_error( sprintf( 'Cannot create Collection <code>%s</code>: callback does not exist.', $this->key ) );
-			$this->callback = '__return_empty_array';
-		}
+		if ( is_callable( $this->callback ) )
+			return;
+
+		trigger_error( sprintf( 'Cannot create Collection <code>%s</code>: callback does not exist.', $this->key ) );
+		$this->callback = '__return_empty_array';
 	}
 
 	/**
-	 * Check if item exists.
+	 * Check if item in Collection.
 	 *
 	 * @param mixed $item
 	 * @return bool
 	 */
-	function has_item( $item ) {
-		return in_array( $item, $this->items );
+	function contains( $item ) {
+		return in_array( $item, $this->get_items() );
+	}
+
+	/**
+	 * Check Collection has item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this::get_items()
+	 * @return mixed
+	 */
+	function has( $key ) {
+		return isset( $this->get_items()[$key] );
+	}
+
+	/**
+	 * Get item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this::has()
+	 * @uses $this::get_items()
+	 * @return null|mixed
+	 */
+	function get_item( $key ) {
+		if ( !$this->has( $key ) )
+			return null;
+
+		return $this->get_items()[$key];
 	}
 
 	/**
@@ -261,13 +293,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$items = ( array ) call_user_func( $this->callback );
 
 		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls, 'callback' );
 
 		# Filter items.
 		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
 
 		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls, 'filtered' );
 		do_action( 'qm/stop', 'collection:' . $this->key . '/_items/' . $calls );
 
 		# Set created time.
