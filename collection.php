@@ -261,13 +261,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$items = ( array ) call_user_func( $this->callback );
 
 		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls, 'callback' );
 
 		# Filter items.
 		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
 
 		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls, 'filtered' );
 		do_action( 'qm/stop', 'collection:' . $this->key . '/_items/' . $calls );
 
 		# Set created time.
