@@ -223,10 +223,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			$this->callback = '__return_empty_array';
 
 		# Check callback is callable.
-		if ( !is_callable( $this->callback ) ) {
-			trigger_error( sprintf( 'Cannot create Collection <code>%s</code>: callback does not exist.', $this->key ) );
-			$this->callback = '__return_empty_array';
-		}
+		if ( is_callable( $this->callback ) )
+			return;
+
+		trigger_error( sprintf( 'Cannot create Collection <code>%s</code>: callback does not exist.', $this->key ) );
+		$this->callback = '__return_empty_array';
 	}
 
 	/**
