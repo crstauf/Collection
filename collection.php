@@ -24,14 +24,14 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @var null|DateTime $expiration
 	 * @var null|callback $callback
 	 * @var array $items
-	 * @var bool|string $from_storage
+	 * @var string $source
 	 */
 	protected $key = '';
 	protected $created = null;
 	protected $expiration = null;
 	protected $callback = null;
 	protected $items = array();
-	protected $from_storage = false;
+	protected $source = 'runtime';
 
 	/**
 	 * Get transient name.
@@ -129,7 +129,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( !$in_cache )
 			return null;
 
-		$cached->from_storage = 'object_cache';
+		$cached->source = 'object_cache';
 
 		return $cached;
 	}
@@ -147,7 +147,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( empty( $transient ) )
 			return null;
 
-		$transient->from_storage = 'transient';
+		$transient->source = 'transient';
 
 		# Store in cache.
 		wp_cache_add( $key, $transient, __CLASS__ );
