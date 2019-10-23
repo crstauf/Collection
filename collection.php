@@ -241,6 +241,32 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
+	 * Check Collection has item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this::get_items()
+	 * @return mixed
+	 */
+	function has( $key ) {
+		return isset( $this->get_items()[$key] );
+	}
+
+	/**
+	 * Get item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this::has()
+	 * @uses $this::get_items()
+	 * @return null|mixed
+	 */
+	function get_item( $key ) {
+		if ( !$this->has( $key ) )
+			return null;
+
+		return $this->get_items()[$key];
+	}
+
+	/**
 	 * Get items.
 	 *
 	 * @return array
