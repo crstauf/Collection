@@ -412,4 +412,38 @@ if ( !function_exists( 'get_collection' ) ) {
 
 }
 
+
+/*
+ ######  ##       ####
+##    ## ##        ##
+##       ##        ##
+##       ##        ##
+##       ##        ##
+##    ## ##        ##
+ ######  ######## ####
+*/
+
+class Collection_CLI {
+
+	function list( $args, $assoc_args ) {
+
+	}
+
+	function get( $args, $assoc_args ) {
+
+	}
+
+	function items( $args, $assoc_args ) {
+
+	}
+
+	function purge( $args, $assoc_args ) {
+		
+	}
+
+}
+
+if ( 'cli' === php_sapi_name() )
+	WP_CLI::add_command( 'collection', 'Collection_CLI' );
+
 ?>
