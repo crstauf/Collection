@@ -209,6 +209,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		);
 	}
 
+	/**
+	 * Set callback function to get items from.
+	 *
+	 * @param callable $callback
+	 */
 	protected function set_callback( callable $callback ) {
 		# Filter callback.
 		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
@@ -225,7 +230,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * Check if item exists.
+	 * Check if item in Collection.
 	 *
 	 * @param mixed $item
 	 * @return bool
