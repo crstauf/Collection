@@ -59,6 +59,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			return;
 		}
 
+		# Clear transient from database.
+		if ( -1 === $life )
+			static::_clear( $key );
+
 		# Store settings.
 		static::$registered[$key] = array(
 			'callback' => $callback,
@@ -67,6 +71,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		do_action( 'collection_registered', $key );
 		do_action( 'collection:' . $key . '/registered' );
+	}
+
+	protected static function _clear( $key ) {
+		delete_transient( static::transient_name( $key ) );
 	}
 
 	/**
@@ -86,7 +94,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			trigger_error( sprintf( 'Collection <code>%s</code> is not registered.', $key ) );
 
 			# Return empty Collection.
-			return new self( $key );
+			return static::get_empty();
 		}
 
 		# Check object cache.
@@ -115,12 +123,21 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
+	 * Get empty Collection.
+	 *
+	 * @return Collection
+	 */
+	static function get_empty() {
+		return new self( uniqid( '__empty' ) );
+	}
+
+	/**
 	 * Check object cache for Collection.
 	 *
 	 * @param string $key
 	 * @return null|Collection
 	 */
-	protected static function get_from_object_cache( string $key ) {
+	protected static function get_from_object_cache( string $key ) {error_log( __METHOD__ . '( ' . $key . ' )' );
 		# Check object cache.
 		$in_cache = false;
 		$cached = wp_cache_get( $key, __CLASS__, false, $in_cache );
@@ -140,7 +157,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @param string $key
 	 * @return null|Collection
 	 */
-	protected static function get_from_transient( string $key ) {
+	protected static function get_from_transient( string $key ) {error_log( __METHOD__ . '( ' . $key . ' )' );
 		$transient = get_transient( static::transient_name( $key ) );
 
 		# If no transient found, return null.
@@ -159,14 +176,14 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Construct.
 	 *
 	 * @param mixed $key
-	 * @param callback $callback
+	 * @param null|callback $callback
 	 * @param int $life
 	 *
 	 * @uses $this::_get_items()
 	 * @uses $this::set_expiration()
 	 * @uses $this::save()
 	 */
-	protected function __construct( $key, callable $callback = null, int $life = -1 ) {
+	protected function __construct( $key, $callback = null, int $life = -1 ) {
 		# Set key.
 		$this->key = ( string ) $key;
 
@@ -194,6 +211,19 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		do_action( 'collection:' . $this->key . '/constructed', $this );
 	}
 
+	function __get( $key ) {
+		$allowed_properties = array(
+			'key',
+			'created',
+			'expiration',
+			'callback',
+			'source',
+		);
+
+		if ( in_array( $key, $allowed_properties ) )
+			return $this->$key;
+	}
+
 	/**
 	 * Sleeper.
 	 *
@@ -212,9 +242,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Set callback function to get items from.
 	 *
-	 * @param callable $callback
+	 * @param null|callback $callback
 	 */
-	protected function set_callback( callable $callback ) {
+	protected function set_callback( $callback ) {
 		# Filter callback.
 		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
 
@@ -356,10 +386,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Clear Collection from database.
 	 *
-	 * @uses $this::transient_name()
+	 * @uses $this::_clear()
 	 */
 	function clear() {
-		delete_transient( static::transient_name( $this->key ) );
+		static::_clear( $this->key );
 		do_action( 'collection:' . $this->key . '/cleared', $this );
 	}
 
@@ -444,6 +474,14 @@ if ( !function_exists( 'get_collection' ) ) {
 
 }
 
+function data() {
+	return range( 1, 5 );
+}
+
+add_action( 'init', function() {
+	register_collection( 'tester', 'data', HOUR_IN_SECONDS );
+} );
+
 
 /*
  ######  ##       ####
@@ -457,25 +495,120 @@ if ( !function_exists( 'get_collection' ) ) {
 
 class Collection_CLI {
 
-	function list( $args, $assoc_args ) {
+	/**
+	 * @var string[]
+	 */
+	protected static $commands = array(
+		'list',
+		'get',
+		'items',
+		'clear',
+		'refresh',
+	);
 
+	/**
+	 * @var string[]
+	 */
+	protected static $registered = array();
+
+	/**
+	 * Action: collection_registered
+	 */
+	static function action__collection_registered( $key ) {
+		static::$registered[] = $key;
 	}
 
-	function get( $args, $assoc_args ) {
+	function __invoke( $args, $assoc_args = array() ) {
+		$command = array_shift( $args );
 
+		if ( !in_array( $command, static::$commands ) )
+			return;
+
+		call_user_func( array( $this, $command ), $args, $assoc_args );
 	}
 
-	function items( $args, $assoc_args ) {
-
+	protected function get_fields( Collection $collection ) {
+		return array(
+			'key'        => $collection->key,
+			'created'    => $collection->created->format( DATE_ISO8601 ),
+			'expiration' => ( is_a( $collection->expiration, 'DateTime' ) ? $collection->expiration->format( DATE_ISO8601 ) : 'none' ),
+			'callback'   => $collection->callback,
+			'items'      => $collection->get_items(),
+			'source'     => $collection->source,
+		);
 	}
 
-	function purge( $args, $assoc_args ) {
-		
+	protected function list( $args, $assoc_args = array() ) {
+		$fields = array_merge( array( 'i' ), array_keys( $this->get_fields( Collection::get_empty() ) ) );
+		$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
+		$items = array();
+
+		foreach ( static::$registered as $i => $key ) {
+			$collection = get_collection( $key );
+
+			if ( empty( $collection ) )
+				continue;
+
+			$items[] = array_merge( array( 'i' => ( $i + 1 ) ), $this->get_fields( $collection ) );
+		}
+
+		if ( 'ids' === $formatter->format ) {
+			echo implode( ' ', array_column( $items, 'key' ) );
+			return;
+		}
+
+		$formatter->display_items( $items );
+	}
+
+	protected function get( $args, $assoc_args = array() ) {
+		$key = $args[0];
+		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'yaml' );
+
+		$collection = get_collection( $key );
+
+		if ( empty( $collection ) )
+			WP_CLI::error( 'No Collection found.' );
+
+		$item = $this->get_fields( $collection );
+
+		$items = array( $item );
+		$fields = WP_CLI\Utils\get_flag_value( $assoc_args, 'fields', array_keys( $item ) );
+
+		if ( 'table' === $format ) {
+			$items = array();
+			$fields = array( 'property', 'value' );
+
+			foreach ( $item as $property => $value )
+				$items[] = array(
+					'property' => $property,
+					'value' => $value,
+				);
+		}
+
+		WP_CLI\Utils\format_items( $format, $items, $fields );
+
+		return $collection;
+	}
+
+	protected function clear( $args, $assoc_args = array() ) {
+		$collection = get_collection( $args[0] );
+		$collection->clear();
+
+		WP_CLI::success( 'Cleared ' . $collection->key . ' Collection items.' );
+	}
+
+	protected function refresh( $args, $assoc_args = array() ) {
+		$collection = get_collection( $args[0] );
+		$collection->refresh();
+
+		WP_CLI::success( 'Refreshed ' . $collection->key . ' Collection items.' );
 	}
 
 }
 
-if ( 'cli' === php_sapi_name() )
+if ( 'cli' === php_sapi_name() ) {
+	add_action( 'collection_registered', array( 'Collection_CLI', 'action__collection_registered' ) );
 	WP_CLI::add_command( 'collection', 'Collection_CLI' );
+}
 
 ?>
