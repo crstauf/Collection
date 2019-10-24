@@ -485,6 +485,9 @@ if ( !function_exists( 'get_collection' ) ) {
  ######  ######## ####
 */
 
+/**
+ * Collection CLI commands.
+ */
 class Collection_CLI {
 
 	/**
@@ -505,11 +508,21 @@ class Collection_CLI {
 
 	/**
 	 * Action: collection_registered
+	 *
+	 * - capture keys of registered Collection
+	 *
+	 * @param mixed $key
 	 */
 	static function action__collection_registered( $key ) {
 		static::$registered[] = $key;
 	}
 
+	/**
+	 * Invoke.
+	 *
+	 * @param array $args
+	 * @param array $assoc_args
+	 */
 	function __invoke( $args, $assoc_args = array() ) {
 		$command = array_shift( $args );
 
@@ -519,6 +532,12 @@ class Collection_CLI {
 		call_user_func( array( $this, $command ), $args, $assoc_args );
 	}
 
+	/**
+	 * Get Collection fields.
+	 *
+	 * @param Collection $collection
+	 * @return array
+	 */
 	protected function get_fields( Collection $collection ) {
 		return array(
 			'key'        => $collection->key,
@@ -598,6 +617,7 @@ class Collection_CLI {
 
 }
 
+# Add CLI interface.
 if ( 'cli' === php_sapi_name() ) {
 	add_action( 'collection_registered', array( 'Collection_CLI', 'action__collection_registered' ) );
 	WP_CLI::add_command( 'collection', 'Collection_CLI' );
