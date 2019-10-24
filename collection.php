@@ -474,14 +474,6 @@ if ( !function_exists( 'get_collection' ) ) {
 
 }
 
-function data() {
-	return range( 1, 5 );
-}
-
-add_action( 'init', function() {
-	register_collection( 'tester', 'data', HOUR_IN_SECONDS );
-} );
-
 
 /*
  ######  ##       ####
