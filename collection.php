@@ -128,7 +128,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @return Collection
 	 */
 	static function get_empty() {
-		return new self( uniqid( '__empty' ) );
+		return new self( uniqid( '__empty_' ) );
 	}
 
 	/**
@@ -539,11 +539,32 @@ class Collection_CLI {
 	 * @return array
 	 */
 	protected function get_fields( Collection $collection ) {
+		# Get and format Collection's expiration.
+		$expiration = is_a( $collection->expiration, 'DateTime' )
+			? $collection->expiration->format( DATE_ISO8601 )
+			: 'none';
+
+		# Get Collection's callback.
+		$callback = $collection->callback;
+
+		# Format Collection's callback.
+		if ( is_array( $callback ) ) {
+			$class = $callback[0];
+			$access = '::';
+
+			if ( is_object( $callback[0] ) ) {
+				$class  = get_class( $class );
+				$access = '->';
+			}
+
+			$callback = $class . $access . $callback[1];
+		}
+
 		return array(
 			'key'        => $collection->key,
 			'created'    => $collection->created->format( DATE_ISO8601 ),
-			'expiration' => ( is_a( $collection->expiration, 'DateTime' ) ? $collection->expiration->format( DATE_ISO8601 ) : 'none' ),
-			'callback'   => $collection->callback,
+			'expiration' => $expiration,
+			'callback'   => $callback . '()',
 			'items'      => $collection->get_items(),
 			'source'     => $collection->source,
 		);
@@ -573,21 +594,33 @@ class Collection_CLI {
 
 	protected function get( $args, $assoc_args = array() ) {
 		$key = $args[0];
-		$format = WP_CLI\Utils\get_flag_value( $assoc_args, 'format', 'yaml' );
+		$fields = array( 'key', 'items', 'expiration' );
+		$count = ( int ) WP_CLI\Utils\get_flag_value( $assoc_args, 'count', 1 );
 
-		$collection = get_collection( $key );
+		if ( 1 !== $count )
+			array_unshift( $fields, 'i' );
 
-		if ( empty( $collection ) )
-			WP_CLI::error( 'No Collection found.' );
+		$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
+		$items = array();
 
-		$item = $this->get_fields( $collection );
+		for ( $i = 0; $i < $count; $i++ ) {
+			$collection = get_collection( $key );
 
-		$items = array( $item );
-		$fields = WP_CLI\Utils\get_flag_value( $assoc_args, 'fields', array_keys( $item ) );
+			if ( empty( $collection ) )
+				WP_CLI::error( 'No Collection found.' );
 
-		if ( 'table' === $format ) {
+			$items[] = array_merge( array( 'i' => $i + 1 ), $this->get_fields( $collection ) );
+			// $items[] = $this->get_fields( $collection );
+		}
+
+		if (
+			'table' === $formatter->format
+			&& 1 === $count
+		) {
+			$item = array_pop( $items );
 			$items = array();
 			$fields = array( 'property', 'value' );
+			$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
 
 			foreach ( $item as $property => $value )
 				$items[] = array(
@@ -596,7 +629,7 @@ class Collection_CLI {
 				);
 		}
 
-		WP_CLI\Utils\format_items( $format, $items, $fields );
+		$formatter->display_items( $items );
 
 		return $collection;
 	}
@@ -622,5 +655,7 @@ if ( 'cli' === php_sapi_name() ) {
 	add_action( 'collection_registered', array( 'Collection_CLI', 'action__collection_registered' ) );
 	WP_CLI::add_command( 'collection', 'Collection_CLI' );
 }
+
+do_action( 'ready_for_collections' );
 
 ?>
