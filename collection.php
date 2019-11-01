@@ -65,6 +65,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			    'life' => $life,
 		);
 
+		if (
+			defined( 'WP_DEBUG' )
+			&& WP_DEBUG
+		)
+			static::check_duplicate( $key );
+
 		do_action( 'collection_registered', $key );
 		do_action( 'collection:' . $key . '/registered' );
 	}
@@ -112,6 +118,28 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		do_action( 'collection:' . $key . '/loaded', $stored );
 
 		return $stored;
+	}
+
+	/**
+	 * Check if Collector is duplicate of another.
+	 *
+	 * @param int|string $key
+	 */
+	static function check_duplicate( $key ) {
+		$callback = static::$registered[$key]['callback'];
+		$callbacks = array();
+
+		foreach ( static::$registered as $_key => $array )
+			if ( $key !== $_key )
+				$callbacks[$_key] = $array['callback'];
+
+		$result = array_search( $callback, $callbacks );
+
+		if (
+			false !== $result
+			&& call_user_func( $callback ) == call_user_func( $callbacks[$result] )
+		)
+			trigger_error( sprintf( 'The Collector <code>%s</code> uses the same callback as <code>%s</code>.', $key, $result ) );
 	}
 
 	/**
