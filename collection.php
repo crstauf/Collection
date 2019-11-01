@@ -36,6 +36,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected $access_log = array();
 
 	/**
+	 * Get class name to use for Collections.
+	 *
+	 * @return string
+	 */
+	static function class() {
+		return ( string ) apply_filters( 'collection_class', __CLASS__ );
+	}
+
+	/**
 	 * Get transient name.
 	 *
 	 * @param mixed $key
@@ -471,10 +480,11 @@ if ( !function_exists( 'register_collection' ) ) {
 	 * @param mixed $key
 	 * @param callback $callback
 	 * @param int $life
+	 * @uses Collection::class()
 	 * @uses Collection::register()
 	 */
 	function register_collection( $key, callable $callback, int $life = -1 ) {
-		Collection::register( $key, $callback, $life );
+		call_user_func( array( Collection::class(), 'register' ), $key, $callback, $life );
 	}
 
 }
@@ -485,11 +495,12 @@ if ( !function_exists( 'get_collection' ) ) {
 	 * Get Collection.
 	 *
 	 * @param mixed $key
+	 * @uses Collection::class()
 	 * @uses Collection::get()
 	 * @return Collection
 	 */
 	function get_collection( $key ) {
-		return Collection::get( $key );
+		return call_user_func( array( Collection::class(), 'get' ), $key );
 	}
 
 }
