@@ -25,6 +25,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @var null|callback $callback
 	 * @var array $items
 	 * @var string $source
+	 * @var array $access_log
 	 */
 	protected $key = '';
 	protected $created = null;
@@ -32,6 +33,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected $callback = null;
 	protected $items = array();
 	protected $source = 'runtime';
+	protected $access_log = array();
 
 	/**
 	 * Get transient name.
@@ -106,8 +108,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$registered = static::$registered[$key];
 
 		# If no results in cache, create new Collection from settings.
-		if ( is_null( $stored ) )
-			return new self( $key, $registered['callback'], $registered['life'] );
+		if ( is_null( $stored ) ) {
+			$new = new self( $key, $registered['callback'], $registered['life'] );
+			$new->maybe_log_access();
+			return $new;
+		}
 
 		# Check callback is correct.
 		if ( $stored->callback !== $registered['callback'] ) {
@@ -117,6 +122,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		do_action( 'collection:' . $key . '/loaded', $stored );
 
+		$stored->maybe_log_access();
 		return $stored;
 	}
 
@@ -235,6 +241,22 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			'callback',
 			'items',
 		);
+	}
+
+	/**
+	 * Log access.
+	 *
+	 * @todo add source of call
+	 */
+	function maybe_log_access() {
+		if (
+			!defined( 'WP_DEBUG' )
+			|| !WP_DEBUG
+		)
+			return;
+
+		$this->access_log[] = microtime( true );
+		wp_cache_set( $this->key, $this, __CLASS__ );
 	}
 
 	/**
