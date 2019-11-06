@@ -521,4 +521,6 @@ if ( !function_exists( 'get_collection' ) ) {
 
 }
 
+do_action( 'collections_available' );
+
 ?>
