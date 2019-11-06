@@ -136,11 +136,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * Check if Collector is duplicate of another.
+	 * Check if a Collection has same data as another.
 	 *
 	 * @param int|string $key
+	 * @return bool
 	 */
 	static function check_duplicate( $key ) {
+		# Get callback for specified Collection.
 		$callback = static::$registered[$key]['callback'];
 
 		# Get specified Collection's items.
@@ -306,6 +308,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Check if item in Collection.
 	 *
 	 * @param mixed $item
+	 * @uses $this::get_items()
 	 * @return bool
 	 */
 	function contains( $item ) {
@@ -349,6 +352,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected function _get_items() {
 		static $calls = 0;
 
+		# Check callback is callable.
 		if ( !is_callable( $this->callback ) ) {
 			trigger_error( sprintf( 'Cannot get items for Collection <code>%s</code>: callback does not exist.', $this->key ) );
 			return;
