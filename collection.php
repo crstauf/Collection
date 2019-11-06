@@ -258,15 +258,26 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * Log access.
+	 * Log access if constant is truthy.
 	 *
-	 * @todo add source of call
+	 * @uses $this::log_access()
 	 */
 	function maybe_log_access() {
 		if ( !COLLECTION__LOG_ACCESS )
 			return;
 
-		$this->access_log[] = microtime( true );
+		$this->log_access();
+	}
+
+	/**
+	 * Add entry to access log.
+	 */
+	protected function log_access() {
+		$this->access_log[] = ( object ) array(
+			'timestamp' => microtime( true ),
+			    'trace' => wp_debug_backtrace_summary( 'Collection', 0, false ),
+		);
+
 		wp_cache_set( $this->key, $this, __CLASS__ );
 	}
 
