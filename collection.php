@@ -8,6 +8,9 @@
  * Version: 1.0
  */
 
+defined( 'COLLECTION__DUPLICATES_CHECK' ) || define( 'COLLECTION__DUPLICATES_CHECK', WP_DEBUG );
+defined( 'COLLECTION__LOG_ACCESS' )       || define( 'COLLECTION__LOG_ACCESS', WP_DEBUG );
+
 /**
  * Collection.
  */
@@ -25,6 +28,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @var null|callback $callback
 	 * @var array $items
 	 * @var string $source
+	 * @var array $access_log
 	 */
 	protected $key = '';
 	protected $created = null;
@@ -32,6 +36,16 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected $callback = null;
 	protected $items = array();
 	protected $source = 'runtime';
+	protected $access_log = array();
+
+	/**
+	 * Get class name to use for Collections.
+	 *
+	 * @return string
+	 */
+	static function class() {
+		return ( string ) apply_filters( 'collection_class', __CLASS__ );
+	}
 
 	/**
 	 * Get transient name.
@@ -68,6 +82,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			'callback' => $callback,
 			    'life' => $life,
 		);
+
+		if ( COLLECTION__DUPLICATES_CHECK )
+			static::check_duplicate( $key );
 
 		do_action( 'collection_registered', $key );
 		do_action( 'collection:' . $key . '/registered' );
@@ -108,8 +125,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$registered = static::$registered[$key];
 
 		# If no results in cache, create new Collection from settings.
-		if ( is_null( $stored ) )
-			return new self( $key, $registered['callback'], $registered['life'] );
+		if ( is_null( $stored ) ) {
+			$new = new self( $key, $registered['callback'], $registered['life'] );
+			$new->maybe_log_access();
+			return $new;
+		}
 
 		# Check callback is correct.
 		if ( $stored->callback !== $registered['callback'] ) {
@@ -119,6 +139,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		do_action( 'collection:' . $key . '/loaded', $stored );
 
+		$stored->maybe_log_access();
 		return $stored;
 	}
 
@@ -129,6 +150,35 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 */
 	static function get_empty() {
 		return new self( uniqid( '__empty_' ) );
+	}
+
+	/**
+	 * Check if a Collection has same data as another.
+	 *
+	 * @param int|string $key
+	 * @return bool
+	 */
+	static function check_duplicate( $key ) {
+		# Get callback for specified Collection.
+		$callback = static::$registered[$key]['callback'];
+
+		# Get specified Collection's items.
+		$items = call_user_func( $callback );
+
+		# Get callbacks for registered Collections.
+		$callbacks = array();
+		foreach ( static::$registered as $_key => $array )
+			if ( $key !== $_key )
+				$callbacks[$_key] = $array['callback'];
+
+		# Check callbacks for duplicate data as specified Collection.
+		foreach ( $callbacks as $_key => $_callback )
+			if ( $items == call_user_func( $_callback ) ) {
+				trigger_error( sprintf( 'The Collection <code>%s</code> uses the same data as <code>%s</code>.', $key, $_key ) );
+				return true;
+			}
+
+		return false;
 	}
 
 	/**
@@ -240,6 +290,30 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
+	 * Log access if constant is truthy.
+	 *
+	 * @uses $this::log_access()
+	 */
+	function maybe_log_access() {
+		if ( !COLLECTION__LOG_ACCESS )
+			return;
+
+		$this->log_access();
+	}
+
+	/**
+	 * Add entry to access log.
+	 */
+	protected function log_access() {
+		$this->access_log[] = ( object ) array(
+			'timestamp' => microtime( true ),
+			    'trace' => wp_debug_backtrace_summary( 'Collection', 0, false ),
+		);
+
+		wp_cache_set( $this->key, $this, __CLASS__ );
+	}
+
+	/**
 	 * Set callback function to get items from.
 	 *
 	 * @param null|callback $callback
@@ -264,6 +338,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Check if item in Collection.
 	 *
 	 * @param mixed $item
+	 * @uses $this::get_items()
 	 * @return bool
 	 */
 	function contains( $item ) {
@@ -285,14 +360,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Get item at specified key.
 	 *
 	 * @param mixed $key
-	 * @uses $this::has()
 	 * @uses $this::get_items()
 	 * @return null|mixed
 	 */
 	function get_item( $key ) {
-		if ( !$this->has( $key ) )
-			return null;
-
 		return $this->get_items()[$key];
 	}
 
@@ -302,7 +373,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @return array
 	 */
 	function get_items() {
-		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items );
+		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items, $this );
 	}
 
 	/**
@@ -311,26 +382,34 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected function _get_items() {
 		static $calls = 0;
 
+		# Check callback is callable.
 		if ( !is_callable( $this->callback ) ) {
 			trigger_error( sprintf( 'Cannot get items for Collection <code>%s</code>: callback does not exist.', $this->key ) );
 			return;
 		}
 
+		# Check number of calls to callback.
+		if (
+			++$calls > 1
+			&& WP_DEBUG
+		)
+			trigger_error( sprintf( 'Callback for Collection <code>%s</code> has been called %d times; should only be once per page load.', $this->key, $calls ), E_USER_WARNING );
+
 		# Start timer: getting items.
-		do_action( 'qm/start', 'collection:' . $this->key . '/_items/' . ++$calls );
+		do_action( 'qm/start', 'collection:' . $this->key . '/_items' );
 
 		# Get items from callback.
 		$items = ( array ) call_user_func( $this->callback );
 
 		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls, 'callback' );
+		do_action( 'qm/lap', 'collection:' . $this->key . '/_items', 'from callback' );
 
 		# Filter items.
 		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
 
 		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls, 'filtered' );
-		do_action( 'qm/stop', 'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap',  'collection:' . $this->key . '/_items', 'from filter' );
+		do_action( 'qm/stop', 'collection:' . $this->key . '/_items' );
 
 		# Set created time.
 		$this->created = date_create();
@@ -451,10 +530,11 @@ if ( !function_exists( 'register_collection' ) ) {
 	 * @param mixed $key
 	 * @param callback $callback
 	 * @param int $life
+	 * @uses Collection::class()
 	 * @uses Collection::register()
 	 */
 	function register_collection( $key, callable $callback, int $life = -1 ) {
-		Collection::register( $key, $callback, $life );
+		call_user_func( array( Collection::class(), 'register' ), $key, $callback, $life );
 	}
 
 }
@@ -465,11 +545,12 @@ if ( !function_exists( 'get_collection' ) ) {
 	 * Get Collection.
 	 *
 	 * @param mixed $key
+	 * @uses Collection::class()
 	 * @uses Collection::get()
 	 * @return Collection
 	 */
 	function get_collection( $key ) {
-		return Collection::get( $key );
+		return call_user_func( array( Collection::class(), 'get' ), $key );
 	}
 
 }
@@ -656,6 +737,6 @@ if ( 'cli' === php_sapi_name() ) {
 	WP_CLI::add_command( 'collection', 'Collection_CLI' );
 }
 
-do_action( 'ready_for_collections' );
+do_action( 'collections_available' );
 
 ?>
