@@ -358,6 +358,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			return;
 		}
 
+		# Check number of calls to callback.
+		if (
+			++$calls > 1
+			&& WP_DEBUG
+		)
+			trigger_error( sprintf( 'Callback for Collection <code>%s</code> has been called %d times; should only be once per page load.', $this->key, $calls ), E_USER_WARNING );
+
 		# Start timer: getting items.
 		do_action( 'qm/start', 'collection:' . $this->key . '/_items/' . ++$calls );
 
