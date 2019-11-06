@@ -142,19 +142,24 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 */
 	static function check_duplicate( $key ) {
 		$callback = static::$registered[$key]['callback'];
-		$callbacks = array();
 
+		# Get specified Collection's items.
+		$items = call_user_func( $callback );
+
+		# Get callbacks for registered Collections.
+		$callbacks = array();
 		foreach ( static::$registered as $_key => $array )
 			if ( $key !== $_key )
 				$callbacks[$_key] = $array['callback'];
 
-		$result = array_search( $callback, $callbacks );
+		# Check callbacks for duplicate data as specified Collection.
+		foreach ( $callbacks as $_key => $_callback )
+			if ( $items == call_user_func( $_callback ) ) {
+				trigger_error( sprintf( 'The Collection <code>%s</code> uses the same data as <code>%s</code>.', $key, $_key ) );
+				return true;
+			}
 
-		if (
-			false !== $result
-			&& call_user_func( $callback ) == call_user_func( $callbacks[$result] )
-		)
-			trigger_error( sprintf( 'The Collector <code>%s</code> uses the same callback as <code>%s</code>.', $key, $result ) );
+		return false;
 	}
 
 	/**
