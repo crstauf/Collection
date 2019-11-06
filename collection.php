@@ -8,6 +8,9 @@
  * Version: 1.0
  */
 
+defined( 'COLLECTION__DUPLICATES_CHECK' ) || define( 'COLLECTION__DUPLICATES_CHECK', WP_DEBUG );
+defined( 'COLLECTION__LOG_ACCESS' )       || define( 'COLLECTION__LOG_ACCESS', WP_DEBUG );
+
 /**
  * Collection.
  */
@@ -76,10 +79,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			    'life' => $life,
 		);
 
-		if (
-			defined( 'WP_DEBUG' )
-			&& WP_DEBUG
-		)
+		if ( COLLECTION__DUPLICATES_CHECK )
 			static::check_duplicate( $key );
 
 		do_action( 'collection_registered', $key );
@@ -258,10 +258,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @todo add source of call
 	 */
 	function maybe_log_access() {
-		if (
-			!defined( 'WP_DEBUG' )
-			|| !WP_DEBUG
-		)
+		if ( !COLLECTION__LOG_ACCESS )
 			return;
 
 		$this->access_log[] = microtime( true );
