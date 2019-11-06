@@ -327,14 +327,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Get item at specified key.
 	 *
 	 * @param mixed $key
-	 * @uses $this::has()
 	 * @uses $this::get_items()
 	 * @return null|mixed
 	 */
 	function get_item( $key ) {
-		if ( !$this->has( $key ) )
-			return null;
-
 		return $this->get_items()[$key];
 	}
 
