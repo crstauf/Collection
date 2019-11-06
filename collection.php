@@ -340,7 +340,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @return array
 	 */
 	function get_items() {
-		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items );
+		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items, $this );
 	}
 
 	/**
