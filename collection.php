@@ -284,9 +284,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Set callback function to get items from.
 	 *
-	 * @param callable $callback
+	 * @param null|callback $callback
 	 */
-	protected function set_callback( callable $callback ) {
+	protected function set_callback( $callback ) {
 		# Filter callback.
 		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
 
