@@ -187,7 +187,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @param string $key
 	 * @return null|Collection
 	 */
-	protected static function get_from_object_cache( string $key ) {error_log( __METHOD__ . '( ' . $key . ' )' );
+	protected static function get_from_object_cache( string $key ) {
 		# Check object cache.
 		$in_cache = false;
 		$cached = wp_cache_get( $key, __CLASS__, false, $in_cache );
@@ -196,6 +196,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( !$in_cache )
 			return null;
 
+		# Set source.
 		$cached->source = 'object_cache';
 
 		return $cached;
@@ -207,13 +208,14 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @param string $key
 	 * @return null|Collection
 	 */
-	protected static function get_from_transient( string $key ) {error_log( __METHOD__ . '( ' . $key . ' )' );
+	protected static function get_from_transient( string $key ) {
 		$transient = get_transient( static::transient_name( $key ) );
 
 		# If no transient found, return null.
 		if ( empty( $transient ) )
 			return null;
 
+		# Set source.
 		$transient->source = 'transient';
 
 		# Store in cache.
@@ -599,6 +601,22 @@ class Collection_CLI {
 	}
 
 	/**
+	 * Get Collection.
+	 *
+	 * @param string $key Collection key.
+	 * @uses get_collection()
+	 * @return Collection
+	 */
+	protected function get_collection( $key ) {
+		$collection = get_collection( $key );
+
+		if ( empty( $collection ) )
+			WP_CLI::error( 'No Collection found.' );
+
+		return $collection;
+	}
+
+	/**
 	 * Invoke.
 	 *
 	 * @param array $args
@@ -652,8 +670,9 @@ class Collection_CLI {
 	}
 
 	protected function list( $args, $assoc_args = array() ) {
-		$fields = array_merge( array( 'i' ), array_keys( $this->get_fields( Collection::get_empty() ) ) );
-		$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
+		$fields = array( 'i', 'key', 'callback', 'items', 'source' );
+		$formatter = new WP_CLI\Formatter( $assoc_args, $fields );$collection_keys = $this->get_collection_keys( $args[0] );
+
 		$items = array();
 
 		foreach ( static::$registered as $i => $key ) {
@@ -676,32 +695,43 @@ class Collection_CLI {
 	protected function get( $args, $assoc_args = array() ) {
 		$key = $args[0];
 		$fields = array( 'key', 'items', 'expiration' );
-		$count = ( int ) WP_CLI\Utils\get_flag_value( $assoc_args, 'count', 1 );
+		$calls = ( int ) WP_CLI\Utils\get_flag_value( $assoc_args, 'calls', 1 );
 
-		if ( 1 !== $count )
+		# If calling more than once.
+		if ( 1 !== $calls ) {
 			array_unshift( $fields, 'i' );
+			array_push( $fields, 'load_time' );
+		}
 
 		$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
 		$items = array();
 
-		for ( $i = 0; $i < $count; $i++ ) {
-			$collection = get_collection( $key );
+		# Get the Collection and store data.
+		for ( $i = 0; $i < $calls; $i++ ) {
+			$start = microtime( true );
+			$collection = $this->get_collection( $key );
 
-			if ( empty( $collection ) )
-				WP_CLI::error( 'No Collection found.' );
+			$item = $this->get_fields( $collection );
 
-			$items[] = array_merge( array( 'i' => $i + 1 ), $this->get_fields( $collection ) );
-			// $items[] = $this->get_fields( $collection );
+			if ( 1 !== $calls ) {
+				$item = array_merge( array( 'i' => $i + 1 ), $item );
+				$item['load_time'] = ( microtime( true ) - $start ) . 's';
+			}
+
+			$items[] = $item;
 		}
 
+		# If calling once and format is 'table'.
 		if (
 			'table' === $formatter->format
-			&& 1 === $count
+			&& 1 === $calls
 		) {
 			$item = array_pop( $items );
 			$items = array();
 			$fields = array( 'property', 'value' );
 			$formatter = new WP_CLI\Formatter( $assoc_args, $fields );
+
+			unset( $item['i'] );
 
 			foreach ( $item as $property => $value )
 				$items[] = array(
@@ -710,23 +740,25 @@ class Collection_CLI {
 				);
 		}
 
+		# Display items.
 		$formatter->display_items( $items );
 
 		return $collection;
 	}
 
 	protected function clear( $args, $assoc_args = array() ) {
-		$collection = get_collection( $args[0] );
+		$collection = $this->get_collection( $args[0] );
 		$collection->clear();
 
 		WP_CLI::success( 'Cleared ' . $collection->key . ' Collection items.' );
 	}
 
 	protected function refresh( $args, $assoc_args = array() ) {
-		$collection = get_collection( $args[0] );
+		$collection = $this->get_collection( $args[0] );
 		$collection->refresh();
 
 		WP_CLI::success( 'Refreshed ' . $collection->key . ' Collection items.' );
+		$this->get( $args, $assoc_args );
 	}
 
 }
