@@ -366,20 +366,20 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			trigger_error( sprintf( 'Callback for Collection <code>%s</code> has been called %d times; should only be once per page load.', $this->key, $calls ), E_USER_WARNING );
 
 		# Start timer: getting items.
-		do_action( 'qm/start', 'collection:' . $this->key . '/_items/' . ++$calls );
+		do_action( 'qm/start', 'collection:' . $this->key . '/_items' );
 
 		# Get items from callback.
 		$items = ( array ) call_user_func( $this->callback );
 
 		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/_items/' . $calls, 'callback' );
+		do_action( 'qm/lap', 'collection:' . $this->key . '/_items', 'from callback' );
 
 		# Filter items.
 		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
 
 		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/_items/' . $calls, 'filtered' );
-		do_action( 'qm/stop', 'collection:' . $this->key . '/_items/' . $calls );
+		do_action( 'qm/lap',  'collection:' . $this->key . '/_items', 'from filter' );
+		do_action( 'qm/stop', 'collection:' . $this->key . '/_items' );
 
 		# Set created time.
 		$this->created = date_create();
