@@ -6,6 +6,8 @@
  * Author: Caleb Stauffer
  * Author URI: develop.calebstauffer.com
  * Version: 1.0
+ *
+ * @todo add filter
  */
 
 defined( 'COLLECTION__DUPLICATES_CHECK' ) || define( 'COLLECTION__DUPLICATES_CHECK', WP_DEBUG );
