@@ -6,8 +6,6 @@
  * Author: Caleb Stauffer
  * Author URI: develop.calebstauffer.com
  * Version: 1.0
- *
- * @todo add filter
  */
 
 defined( 'COLLECTION__DUPLICATES_CHECK' ) || define( 'COLLECTION__DUPLICATES_CHECK', WP_DEBUG );
@@ -135,6 +133,26 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$stored->maybe_log_access();
 		return $stored;
+	}
+
+	/**
+	 * Filter: get_collection_items
+	 *
+	 * Get Collection items via filter.
+	 *
+	 * @param mixed $key
+	 * @param array $default
+	 * @return array
+	 *
+	 * @todo test
+	 */
+	static function filter__get_collection_items( $key, array $default = array() ) {
+		$collection = Collection::get( $key );
+		
+		if ( empty( $collection ) )
+			return $default;
+			
+		return $collection->get_items();
 	}
 
 	/**
@@ -526,6 +544,8 @@ if ( !function_exists( 'get_collection' ) ) {
 	}
 
 }
+
+add_filter( 'get_collection_items', array( 'Collection', 'filter__get_collection_items' ), 0, 2 );
 
 do_action( 'collections_available' );
 
