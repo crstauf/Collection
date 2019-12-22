@@ -140,18 +140,24 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 *
 	 * Get Collection items via filter.
 	 *
+	 * Example: apply_filters( 'get_collection_items', 'foobar', array( 1, 2, 3 ) )
+	 * In this example, one, two, and three are the default items. 
+	 * If the 'foobar' Collection is registered and not empty, 
+	 * the items in that Collection will be returned.
+	 *
 	 * @param mixed $key
 	 * @param array $default
+	 * @uses static::get()
 	 * @return array
 	 *
 	 * @todo test
 	 */
 	static function filter__get_collection_items( $key, array $default = array() ) {
 		$collection = Collection::get( $key );
-		
+
 		if ( empty( $collection ) )
 			return $default;
-			
+
 		return $collection->get_items();
 	}
 
@@ -545,6 +551,11 @@ if ( !function_exists( 'get_collection' ) ) {
 
 }
 
+/**
+ * Filter to facilitate simple retrieval of Collection items.
+ *
+ * @uses Collection::filter__get_collection_items()
+ */
 add_filter( 'get_collection_items', array( 'Collection', 'filter__get_collection_items' ), 0, 2 );
 
 do_action( 'collections_available' );
