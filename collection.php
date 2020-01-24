@@ -1,10 +1,10 @@
 <?php
 /**
  * Plugin name: Collection
- * Plugin URI: https://gist.github.com/crstauf/7f25b9be2eaea72952fee770432ba27e
+ * Plugin URI: https://github.com/crstauf/Collection
  * Description: Manage collections of anything in WordPress.
  * Author: Caleb Stauffer
- * Author URI: develop.calebstauffer.com
+ * Author URI: https://develop.calebstauffer.com
  * Version: 1.0
  */
 
