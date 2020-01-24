@@ -348,8 +348,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 	/**
 	 * Get items from callback and set.
+	 *
+	 * @param bool $refreshing
 	 */
-	protected function _get_items() {
+	protected function _get_items( bool $refreshing = false ) {
 		static $calls = 0;
 
 		# Check callback is callable.
@@ -362,6 +364,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if (
 			++$calls > 1
 			&& WP_DEBUG
+			&& !$refreshing
 		)
 			trigger_error( sprintf( 'Callback for Collection <code>%s</code> has been called %d times; should only be once per page load.', $this->key, $calls ), E_USER_WARNING );
 
@@ -424,7 +427,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		static $calls = 0;
 
 		# Get items from callback.
-		$this->_get_items();
+		$this->_get_items( true );
 
 		# Re-save to database.
 		$this->save();
