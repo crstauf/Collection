@@ -14,9 +14,14 @@
 class Collection implements ArrayAccess, Countable, Iterator {
 
 	/**
-	 * @var string[] Registered Collection keys.
+	 * @var array Registered Collection keys.
 	 */
 	protected static $registered = array();
+
+	/**
+	 * @var Collection[] Collections.
+	 */
+	protected static $collections = array();
 
 	/**
 	 * @var string $key
@@ -56,10 +61,25 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return $key;
 	}
 
+	/**
+	 * Check if registered.
+	 *
+	 * @param string $key
+	 * @return bool
+	 */
 	static function is_registered( string $key ) {
 		return isset( static::$registered[$key] );
 	}
 
+	/**
+	 * Register Collection.
+	 *
+	 * @param mixed $key
+	 * @param mixed $callback
+	 * @param int $life
+	 * @uses static::format_key()
+	 * @uses static::is_registered()
+	 */
 	static function register( $key, $callback = null, int $life = -1 ) {
 		$key = static::format_key( $key, 'register' );
 
@@ -80,30 +100,38 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		do_action( 'collection:' . $key . '/registered' );
 	}
 
+	/**
+	 * Get Collection.
+	 *
+	 * @param mixed $key
+	 * @uses static::format_key()
+	 * @uses static::is_registered()
+	 * @return self
+	 */
 	static function get( $key ) {
-		static $collections = array();
-
 		$key = static::format_key( $key, 'get' );
 
-		if ( isset( $collections[$key] ) )
-			return $collections[$key];
+		if ( isset( static::$collections[$key] ) )
+			return static::$collections[$key];
 
 		# Check if not registered.
 		if ( !static::is_registered( $key ) ) {
 			trigger_error( sprintf( 'Collection <code>%s</code> is not registered.', $key ) );
 
 			# Return empty Collection.
-			return new self( $key );
+			return new self( $key, '__return_empty_array' );
 		}
 
 		# Get registered settings.
 		$registered = static::$registered[$key];
 
-		return $collections[$key] = new self( $key, $registered['callback'], $registered['life'] );
+		return new self( $key, $registered['callback'], $registered['life'] );
 	}
 
 	/**
 	 * Count number of constructs.
+	 *
+	 * @param string $key
 	 */
 	protected static function track_constructs( string $key ) {
 		static $calls = array();
@@ -155,8 +183,26 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		# Save.
 		$this->save();
 
+		# Do actions.
 		do_action( 'collection_constructed', $this );
 		do_action( 'collection:' . $this->key . '/constructed', $this );
+	}
+
+	/**
+	 * Getter.
+	 *
+	 * @param string $key
+	 * @return mixed
+	 */
+	function __get( $key ) {
+		if ( !in_array( $key, array(
+			'key',
+			'created',
+			'source',
+		) ) )
+			return;
+
+		return $this->$key;
 	}
 
 	/**
@@ -185,6 +231,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 ######  ########    ##       ##    ######## ##     ##  ######
 	*/
 
+	/**
+	 * Set callback.
+	 *
+	 * @param mixed $callback
+	 */
 	protected function set_callback( $callback ) {
 		# Filter callback.
 		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
@@ -201,6 +252,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$this->callback = '__return_empty_array';
 	}
 
+	/**
+	 * Set items.
+	 */
 	protected function set_items() {
 		static $calls = 0;
 		$calls++;
@@ -222,15 +276,25 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		do_action( 'qm/stop', 'collection:' . $this->key . '/_items' );
 
 		# Set created time.
-		$this->created = date_create();
+		$this->created = date_create( 'now', new DateTimeZone( 'UTC' ) );
 
 		do_action( 'collection_curated', $this->key, $this, $calls );
 		do_action( 'collection:' . $this->key . '/curated', $this, $calls );
 	}
 
+	/**
+	 * Set expiration.
+	 *
+	 * @param int $life
+	 */
 	protected function set_expiration( int $life ) {}
 
-	protected function save() {}
+	/**
+	 * Save.
+	 */
+	protected function save() {
+		static::$collections[$this->key] = $this;
+	}
 
 
 	/*
@@ -252,6 +316,54 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items, $this );
 	}
 
+	/**
+	 * Get item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this->get_items()
+	 * @return mixed
+	 */
+	function get_item( $key ) {
+		return $this->get_items()[$key];
+	}
+
+	/**
+	 * Check item at specified key.
+	 *
+	 * @param mixed $key
+	 * @uses $this->get_items()
+	 * @return bool
+	 */
+	function has( $key ) {
+		return isset( $this->get_items()[$key] );
+	}
+
+	/**
+	 * Check if value in Collection.
+	 *
+	 * @param mixed $value
+	 * @uses $this->get_items()
+	 * @return bool
+	 */
+	function contains( $value ) {
+		return in_array( $value, $this->get_items() );
+	}
+
+	/**
+	 * Refresh items.
+	 *
+	 * @uses $this->set_items()
+	 * @return $this
+	 */
+	function refresh() {
+		$this->set_items();
+
+		do_action( 'collection_refreshed', $this );
+		do_action( 'collection:' . $this->key . '/refreshed', $this );
+
+		return $this;
+	}
+
 
 	/*
 	   ###    ########  ########     ###    ##    ##    ###     ######   ######  ########  ######   ######
@@ -264,11 +376,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	function offsetExists( $offset ) {
-		return isset( $this->items[$offset] );
+		return isset( $this->get_items()[$offset] );
 	}
 
 	function offsetGet( $offset ) {
-		return $this->items[$offset];
+		return $this->get_items()[$offset];
 	}
 
 	function offsetSet( $offset, $value ) {}
@@ -286,7 +398,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	function count() {
-		return count( $this->items );
+		return count( $this->get_items() );
 	}
 
 
@@ -301,23 +413,23 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	function rewind() {
-		reset( $this->items );
+		reset( $this->get_items() );
 	}
 
 	function current() {
-		return current( $this->items );
+		return current( $this->get_items() );
 	}
 
 	function key() {
-		return key( $this->items );
+		return key( $this->get_items() );
 	}
 
 	function next() {
-		return next( $this->items );
+		return next( $this->get_items() );
 	}
 
 	function valid() {
-		$key = key( $this->items );
+		$key = key( $this->get_items() );
 		return (
 			    null !== $key
 			&& false !== $key
@@ -339,14 +451,29 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 if ( !function_exists( 'register_collection' ) ) {
 
-	function register_collection( $key, $items = array(), int $life = -1 ) {
-		Collection::register( $key, $items, $life );
+	/**
+	 * Register Collection.
+	 *
+	 * @param mixed $key
+	 * @param mixed $callback
+	 * @param int $life
+	 * @uses Collection::register()
+	 */
+	function register_collection( $key, $callback = null, int $life = -1 ) {
+		Collection::register( $key, $callback, $life );
 	}
 
 }
 
 if ( !function_exists( 'get_collection' ) ) {
 
+	/**
+	 * Get Collection.
+	 *
+	 * @param mixed $key
+	 * @uses Collection::get()
+	 * @return Collection
+	 */
 	function get_collection( $key ) {
 		return Collection::get( $key );
 	}
