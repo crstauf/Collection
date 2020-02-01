@@ -70,7 +70,7 @@ class Collection_Base_Test extends WP_UnitTestCase {
 			'contains',
 			'refresh',
 		) as $method_name )
-			$this->assertIsCallable( array( $collection, $method_name ), 'get_collection( "' . $key . '" )->' . $method_name . '() is not callable.' );
+			$this->assertIsCallable( array( $collection, $method_name ) );
 	}
 
 	function test_source() {
