@@ -33,13 +33,6 @@ class Collection_Plugin_Test extends WP_UnitTestCase {
 		$this->assertTrue( function_exists(      'get_collection' ) );
 	}
 
-	function test_constants() {
-		$this->markTestIncomplete();
-
-		$this->assertTrue( defined( 'COLLECTION__LOG_ACCESS' ) );
-		$this->assertTrue( defined( 'COLLECTION__CHECK_DUPLICATES' ) );
-	}
-
 	function test_action() {
 		$this->assertTrue( ( bool ) did_action( 'collections_available' ) );
 	}
