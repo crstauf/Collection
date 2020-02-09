@@ -28,10 +28,14 @@ class Collection_Base_Test extends WP_UnitTestCase {
 		return static::COLLECTION_KEY_PREFIX . $suffix;
 	}
 
-	protected static function register_collection( $key_suffix ) {
+	protected function register_collection( $key_suffix ) {
 		$key = static::key( $key_suffix );
 		register_collection( $key, array( __CLASS__, 'collection_callback' ) );
 		return $key;
+	}
+
+	protected function get_collection( $key ) {
+		return get_collection( $key );
 	}
 
 
@@ -64,8 +68,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 		) as $static_method_name )
 			$this->assertIsCallable( array( Collection::class, $static_method_name ) );
 
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		foreach ( array(
 			'has',
@@ -82,18 +86,18 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	}
 
 	function test_source() {
-		$key = static::register_collection( __FUNCTION__ );
-		$this->assertEquals( 'runtime', get_collection( $key )->source );
+		$key = $this->register_collection( __FUNCTION__ );
+		$this->assertEquals( 'runtime', $this->get_collection( $key )->source );
 	}
 
 	function test_key() {
-		$key = static::register_collection( __FUNCTION__ );
-		$this->assertEquals( $key, get_collection( $key )->key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$this->assertEquals( $key, $this->get_collection( $key )->key );
 	}
 
 	function test_created() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		$this->assertInstanceOf( 'DateTime', $collection->created );
 		$this->assertLessThanOrEqual( date_create( 'now', new DateTimeZone( 'UTC' ) ), $collection->created );
@@ -106,8 +110,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->offsetUnset()
 	 */
 	function test_array_access() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		# Test offsetGet().
 		$this->assertEquals( 3, $collection[2] );
@@ -128,8 +132,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->count()
 	 */
 	function test_countable() {
-		$key = static::register_collection( __FUNCTION__ );
-		$this->assertEquals( count( static::collection_callback() ), count( get_collection( $key ) ) );
+		$key = $this->register_collection( __FUNCTION__ );
+		$this->assertEquals( count( static::collection_callback() ), count( $this->get_collection( $key ) ) );
 	}
 
 	/**
@@ -139,8 +143,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->next()
 	 */
 	function test_iterable() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		foreach ( $collection as $i => $v )
 			if ( 'rand' !== $i )
@@ -181,7 +185,7 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @uses Collection::is_registered()
 	 */
 	function test_is_registered() {
-		$key = static::register_collection( __FUNCTION__ );
+		$key = $this->register_collection( __FUNCTION__ );
 
 		$this->assertTrue( Collection::is_registered( $key ) );
 		$this->assertTrue( ( bool ) did_action( 'collection_registered' ) );
@@ -189,18 +193,18 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	}
 
 	function test_duplicate_registrations_notice() {
-		static::register_collection( __FUNCTION__ );
+		$this->register_collection( __FUNCTION__ );
 		$this->expectException( 'PHPUnit_Framework_Error_Notice' );
-		static::register_collection( __FUNCTION__ );
+		$this->register_collection( __FUNCTION__ );
 	}
 
 	function test_get_unregistered_notice() {
 		$this->expectException( 'PHPUnit_Framework_Error_Notice' );
-		get_collection( static::key( __FUNCTION__ ) );
+		$this->get_collection( static::key( __FUNCTION__ ) );
 	}
 
 	function test_get_unregistered() {
-		$collection = @get_collection( static::key( __FUNCTION__ ) );
+		$collection = @$this->get_collection( static::key( __FUNCTION__ ) );
 		$this->assertInstanceOf( Collection::class, $collection );
 		$this->assertEmpty( $collection->items );
 	}
@@ -217,8 +221,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	*/
 
 	function test_get() {
-		$key = static::register_collection( __FUNCTION__ );
-		$this->assertInstanceOf( Collection::class, get_collection( $key ) );
+		$key = $this->register_collection( __FUNCTION__ );
+		$this->assertInstanceOf( Collection::class, $this->get_collection( $key ) );
 
 		$this->assertTrue( ( bool ) did_action( 'collection_constructed' ) );
 		$this->assertTrue( ( bool ) did_action( 'collection:' . $key . '/constructed' ) );
@@ -236,9 +240,9 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	*/
 
 	function test_callable_callback() {
-		$key = static::register_collection( __FUNCTION__ );
+		$key = $this->register_collection( __FUNCTION__ );
 
-		get_collection( $key );
+		$this->get_collection( $key );
 		$this->assertNull( null );
 	}
 
@@ -246,7 +250,7 @@ class Collection_Base_Test extends WP_UnitTestCase {
 		$key = static::key( __FUNCTION__ );
 		register_collection( $key, 'does_not_exist' );
 		$this->expectException( 'PHPUnit_Framework_Error_Notice' );
-		get_collection( $key );
+		$this->get_collection( $key );
 	}
 
 	/**
@@ -255,7 +259,7 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	function test_uncallable_callback() {
 		$key = static::key( __FUNCTION__ );
 		@register_collection( $key, 'does_not_exist' );
-		$collection = @get_collection( $key );
+		$collection = @$this->get_collection( $key );
 
 		$this->assertInstanceOf( Collection::class, $collection );
 		$this->assertIsArray( $collection->items );
@@ -277,16 +281,16 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->set_items()
 	 */
 	function test_set_items() {
-		$key = static::register_collection( __FUNCTION__ );
-		get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$this->get_collection( $key );
 
 		$this->assertTrue( ( bool ) did_action( 'collection_curated' ) );
 		$this->assertTrue( ( bool ) did_action( 'collection:' . $key . '/curated' ) );
 	}
 
 	function test_items() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		$this->assertObjectHasAttribute( 'items', $collection );
 		$this->assertNotEmpty( $collection->items );
@@ -307,8 +311,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->has()
 	 */
 	function test_has() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		$this->assertTrue( $collection->has( 0 ) );
 		$this->assertTrue( $collection->has( 1 ) );
@@ -322,8 +326,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->contains()
 	 */
 	function test_contains() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		$this->assertTrue( $collection->contains( 1 ) );
 		$this->assertTrue( $collection->contains( 2 ) );
@@ -336,8 +340,8 @@ class Collection_Base_Test extends WP_UnitTestCase {
 	 * @see Collection->refresh()
 	 */
 	function test_refresh() {
-		$key = static::register_collection( __FUNCTION__ );
-		$collection = get_collection( $key );
+		$key = $this->register_collection( __FUNCTION__ );
+		$collection = $this->get_collection( $key );
 
 		$before_refresh = $collection->items;
 		$collection->refresh();
