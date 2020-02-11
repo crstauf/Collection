@@ -256,9 +256,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( !in_array( $key, array(
 			'key',
 			'items',
+			'source',
 			'created',
 			'expiration',
-			'source',
 		) ) )
 			return;
 
@@ -273,11 +273,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	function __sleep() {
 		return array(
 			'key',
-			'created',
-			'expiration',
-			'callback',
 			'items',
 			'source',
+			'created',
+			'callback',
+			'expiration',
 		);
 	}
 

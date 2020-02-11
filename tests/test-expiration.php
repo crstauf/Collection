@@ -1,8 +1,8 @@
 <?php
 
-require_once 'test-base.php';
+require_once 'base.php';
 
-class Collection_Expiration_Test extends Collection_Base_Test {
+class Collection_Expiration_Test extends Collection_Test_Base {
 
 	const COLLECTION_KEY_PREFIX = '_phpunit_expiration_';
 	const LIFE = 1;

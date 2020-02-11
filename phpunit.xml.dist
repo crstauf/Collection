@@ -8,8 +8,16 @@
 	convertWarningsToExceptions="true"
 	>
 	<testsuites>
-		<testsuite name="collection-tests">
-			<directory prefix="test-" suffix=".php">./tests/</directory>
+		<testsuite name="collection">
+			<file>tests/test-plugin.php</file>
+			<file>tests/test-simple.php</file>
+			<file>tests/test-expiration.php</file>
+			<file>tests/test-transient.php</file>
 		</testsuite>
 	</testsuites>
+	<filter>
+		<whitelist processUncoveredFilesFromWhitelist="true">
+			<file>collection.php</file>
+		</whitelist>
+	</filter>
 </phpunit>
