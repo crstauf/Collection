@@ -14,13 +14,13 @@ class Collection_Transient_Test extends Collection_Test_Base {
 	}
 
 	protected function get_collection( $key ) {
-		get_collection( $key );
 		return $this->get_transient( $key );
 	}
 
 	protected function get_transient( $key ) {
-		$transient_key = Collection::transient_key( $key );
-		return get_transient( $transient_key );
+		get_collection( $key );
+		wp_cache_delete( $key, Collection::class );
+		return get_collection( $key );
 	}
 
 	function test_source() {
