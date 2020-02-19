@@ -32,4 +32,14 @@ class Collection_Simple_Test extends Collection_Test_Base {
 		$this->assertEmpty(   $collection->items );
 	}
 
+	function test_track_constructs() {
+		$key = $this->register_collection( __FUNCTION__ );
+		get_collection( $key );
+
+		wp_cache_delete( $key, Collection::class );
+
+		$this->expectException( 'PHPUnit_Framework_Error_Notice' );
+		get_collection( $key );
+	}
+
 }

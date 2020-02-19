@@ -9,13 +9,13 @@ abstract class Collection_Test_Base extends WP_UnitTestCase {
 
 
 	/*
-	 ######  ########    ###    ######## ####  ######
-	##    ##    ##      ## ##      ##     ##  ##    ##
-	##          ##     ##   ##     ##     ##  ##
-	 ######     ##    ##     ##    ##     ##  ##
-	      ##    ##    #########    ##     ##  ##
-	##    ##    ##    ##     ##    ##     ##  ##    ##
-	 ######     ##    ##     ##    ##    ####  ######
+	##     ## ######## ##       ########  ######## ########   ######
+	##     ## ##       ##       ##     ## ##       ##     ## ##    ##
+	##     ## ##       ##       ##     ## ##       ##     ## ##
+	######### ######   ##       ########  ######   ########   ######
+	##     ## ##       ##       ##        ##       ##   ##         ##
+	##     ## ##       ##       ##        ##       ##    ##  ##    ##
+	##     ## ######## ######## ##        ######## ##     ##  ######
 	*/
 
 	static function collection_callback() {
@@ -211,7 +211,26 @@ abstract class Collection_Test_Base extends WP_UnitTestCase {
 	function test_get_from_cache() {
 		$key = $this->register_collection( __FUNCTION__ );
 		get_collection( $key );
-		$this->assertInstanceOf( Collection::class, get_collection( $key ) );
+
+		# Directly check the WP Object Cache.
+		$found = false;
+		$cached = wp_cache_get( $key, Collection::class, false, $found );
+
+		$this->assertTrue( $found );
+		$this->assertNotEmpty( $cached );
+		$this->assertInstanceOf( Collection::class, $cached );
+		$this->assertEquals( static::collection_callback()[2], $cached[2] );
+		$this->assertEquals( 'object_cache', $cached->source );
+
+		# Verify Collection::get() gets from cache.
+		$collection = get_collection( $key );
+		$this->assertInstanceOf( Collection::class, $collection );
+		$this->assertEquals( static::collection_callback()[2], $collection[2] );
+		$this->assertEquals( 'object_cache', $collection->source );
+
+		# Compare the two.
+		$this->assertEquals( $cached[1], $collection[1] );
+		$this->assertEquals( $cached['rand'], $collection['rand'] );
 	}
 
 

@@ -19,11 +19,6 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected static $registered = array();
 
 	/**
-	 * @var Collection[] Collections.
-	 */
-	protected static $collections = array();
-
-	/**
 	 * @var string $key
 	 * @var null|DateTime $created
 	 * @var null|callback $callback
@@ -154,14 +149,17 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Get Collection from cache.
 	 *
 	 * @param string $key
+	 * @uses wp_cache_get()
 	 * @return self|false
-	 *
-	 * @todo use WP_Cache instead of static property
 	 */
 	protected static function get_from_cache( $key ) {
-		return isset( static::$collections[$key] )
-			? static::$collections[$key]
-			: false;
+		$found = false;
+		$cached = wp_cache_get( $key, Collection::class, true, $found );
+
+		if ( !$found )
+			return false;
+
+		return $cached;
 	}
 
 	/**
@@ -192,10 +190,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$calls[$key]++;
 
-		if ( 1 === $calls[$key] )
-			return;
-
-		trigger_error( sprintf( 'Collection <code>%s</code> has been constructed %d times; should only be once per page load.', $key, $calls[$key] ) );
+		if ( 1 !== $calls[$key] )
+			trigger_error( sprintf( 'Collection <code>%s</code> has been constructed %d times; should only be once per page load.', $key, $calls[$key] ) );
 	}
 
 
@@ -347,12 +343,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Maybe set expiration.
 	 *
 	 * @param int $life
-	 * @uses $this->set_expiration()
-	 *
-	 * @todo what to do if life is 0?
 	 */
 	protected function maybe_set_expiration( int $life ) {
-		if ( -1 === $life )
+
+		# If life is less than one second, don't set expiration.
+		if ( $life < 1 )
 			return;
 
 		$now = date_create( 'now', new DateTimeZone( 'UTC' ) );
@@ -363,15 +358,28 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Save.
 	 *
+	 * @uses $this->save_to_cache()
 	 * @uses $this->save_to_transient()
 	 */
 	protected function save() {
-		static::$collections[$this->key] = $this;
+		$this->save_to_cache();
 
 		if ( is_null( $this->expiration ) )
 			return;
 
 		$this->save_to_transient();
+	}
+
+	/**
+	 * Save to WP cache.
+	 *
+	 * @uses wp_cache_add()
+	 */
+	protected function save_to_cache() {
+		$cache = clone $this;
+		$cache->source = 'object_cache';
+
+		$cached = wp_cache_add( $this->key, $cache, Collection::class, -1 );
 	}
 
 	/**
@@ -386,7 +394,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$transient = clone $this;
 		$transient->source = 'transient';
 
-		set_transient( static::transient_key( $this->key ), $transient, $life );
+		$set = set_transient( static::transient_key( $this->key ), $transient, $life );
 	}
 
 
