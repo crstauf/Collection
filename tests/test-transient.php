@@ -1,6 +1,6 @@
 <?php
 
-require_once 'test-expiration.php';
+require_once 'base.php';
 
 class Collection_Transient_Test extends Collection_Test_Base {
 
