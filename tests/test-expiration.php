@@ -1,127 +1,61 @@
 <?php
 
-require_once 'base.php';
+class Collection_Test_Expiration extends Collection_UnitTestCase {
 
-class Collection_Expiration_Test extends Collection_Test_Base {
-
-	const COLLECTION_KEY_PREFIX = '_phpunit_expiration_';
-	const LIFE = 1;
-
-
-	/*
-	##     ## ######## ##       ########  ######## ########   ######
-	##     ## ##       ##       ##     ## ##       ##     ## ##    ##
-	##     ## ##       ##       ##     ## ##       ##     ## ##
-	######### ######   ##       ########  ######   ########   ######
-	##     ## ##       ##       ##        ##       ##   ##         ##
-	##     ## ##       ##       ##        ##       ##    ##  ##    ##
-	##     ## ######## ######## ##        ######## ##     ##  ######
-	*/
-
-	protected function register_collection( $key_suffix ) {
-		$key = self::key( $key_suffix );
-		register_collection( $key, array( __CLASS__, 'collection_callback' ), self::LIFE );
-		return $key;
-	}
-
-	protected function get_transient( $key ) {
-		get_collection( $key );
-		wp_cache_delete( $key, Collection::class );
-		return get_collection( $key );
-	}
-
-	protected function _get_transient( $key ) {
-		return get_transient( Collection::transient_key( $key ) );
-	}
-
-	protected function _get_option( $key ) {
-		$key = '_transient_' . Collection::transient_key( $key );
-		return get_option( $key );
-	}
-
-
-	/*
-	######## ########  ######  ########  ######
-	   ##    ##       ##    ##    ##    ##    ##
-	   ##    ##       ##          ##    ##
-	   ##    ######    ######     ##     ######
-	   ##    ##             ##    ##          ##
-	   ##    ##       ##    ##    ##    ##    ##
-	   ##    ########  ######     ##     ######
-	*/
-
-	function test_get_from_transient() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$transient = $this->get_transient( $key );
-
-		$this->assertNotEmpty( $transient );
-		$this->assertInstanceOf( Collection::class, $transient );
-		$this->assertEquals( 'transient', $transient->source );
-		$this->assertEquals( static::collection_callback()[2], $transient[2] );
-	}
-
-	function test_transient() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$this->get_collection( $key );
-		$transient = $this->_get_transient( $key );
-
-		$this->assertNotEmpty( $transient );
-		$this->assertInstanceOf( Collection::class, $transient );
-	}
-
-	function test_source() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$transient = $this->get_transient( $key );
-
-		$this->assertEquals( 'transient', $transient->source );
-	}
-
-	function test_set_expiration() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$collection = $this->get_collection( $key );
-
+	protected function _test_set_expiration( Collection $collection ) {
 		$this->assertInstanceOf( DateTime::class, $collection->expiration );
-		$this->assertGreaterThanOrEqual( date_create( 'now', new DateTimeZone( 'UTC' ) ), $collection->expiration );
+		$this->assertGreaterThan( date_create( 'now', new DateTimeZone( 'UTC' ) ), $collection->expiration );
 
-		$interval = new DateInterval( 'PT' . self::LIFE . 'S' );
+		$interval = new DateInterval( 'PT' . static::LIFE . 'S' );
 		$this->assertEquals( $collection->expiration->getTimestamp(), $collection->created->add( $interval )->getTimestamp() );
 	}
 
+	function test_runtime_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_runtime( $key ) );
+	}
+
+	function test_cached_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_cached( $key ) );
+	}
+
+	function test_transient_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_transient( $key ) );
+	}
+
+	/**
+	 * @group does_sleep
+	 */
 	function test_expires() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$this->get_collection( $key );
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->get_runtime( $key );
 
-		sleep( self::LIFE + 1 );
+		sleep( static::LIFE + 1 );
 
 		$this->assertFalse( $this->_get_transient( $key ) );
 	}
 
-	function test_expiration_restored() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$collection = $this->get_collection( $key );
+	/**
+	 * @group does_sleep
+	 */
+	function test_restored_after_refresh() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$runtime = $this->get_runtime( $key );
 
-		sleep( self::LIFE + 1 );
+		sleep( static::LIFE + 1 );
 
 		$this->assertFalse( $this->_get_transient( $key ) );
 
-		$collection->refresh();
+		$runtime->refresh();
 
-		# Use get_option() instead due to weirdness.
-		$transient = $this->_get_option( $key );
+		# Use get_option() instead of get_transient() due to
+		# WordPress caching behavior.
+		$option = $this->_get_option( $key );
 
-		$this->assertNotFalse( $transient );
-		$this->assertInstanceOf( Collection::class, $transient );
-	}
-
-	function test_track_constructs() {
-		$key = $this->register_collection( __FUNCTION__ );
-		get_collection( $key );
-
-		delete_transient( Collection::transient_key( $key ) );
-		wp_cache_delete( $key, Collection::class );
-
-		$this->expectException( 'PHPUnit_Framework_Error_Notice' );
-		get_collection( $key );
+		$this->assertNotFalse( $option );
+		$this->assertInstanceOf( Collection::class, $option );
 	}
 
 }

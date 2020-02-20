@@ -1,33 +1,21 @@
 <?php
 
-require_once 'base.php';
+class Collection_Test_Transient extends Collection_UnitTestCase {
 
-class Collection_Transient_Test extends Collection_Test_Base {
-
-	const COLLECTION_KEY_PREFIX = '_phpunit_transient_';
-	const LIFE = 1;
-
-	protected function register_collection( $key_suffix ) {
-		$key = self::key( $key_suffix );
-		register_collection( $key, array( __CLASS__, 'collection_callback' ), self::LIFE );
-		return $key;
+	protected function _test( $transient ) {
+		$this->assertNotEmpty( $transient );
+		$this->assertInstanceOf( Collection::class, $transient );
 	}
 
-	protected function get_collection( $key ) {
-		return $this->get_transient( $key );
+	function test_get_from_transient() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test( $this->get_transient( $key ) );
 	}
 
-	protected function get_transient( $key ) {
-		get_collection( $key );
-		wp_cache_delete( $key, Collection::class );
-		return get_collection( $key );
-	}
-
-	function test_source() {
-		$key = $this->register_collection( __FUNCTION__ );
-		$transient = $this->get_collection( $key );
-
-		$this->assertEquals( 'transient', $transient->source );
+	function test_get_from_transient_direct() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->get_runtime( $key );
+		$this->_test( $this->_get_transient( $key ) );
 	}
 
 }

@@ -56,6 +56,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Format Collection key.
 	 *
+	 * @param string|int $key
+	 * @param null|string $context
 	 * @return string
 	 */
 	static function format_key( $key, $context = null ) {
@@ -313,8 +315,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Set items.
 	 */
 	protected function set_items() {
-		static $calls = 0;
-		$calls++;
+		static $calls = array();
+
+		if ( !isset( $calls[$this->key] ) )
+			$calls[$this->key] = 0;
+
+		$calls[$this->key]++;
 
 		# Start timer: getting items.
 		do_action( 'qm/start', 'collection:' . $this->key . '/_items' );
@@ -335,8 +341,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		# Set created time.
 		$this->created = date_create( 'now', new DateTimeZone( 'UTC' ) );
 
-		do_action( 'collection_curated', $this->key, $this, $calls );
-		do_action( 'collection:' . $this->key . '/curated', $this, $calls );
+		do_action( 'collection_curated', $this->key, $this, $calls[$this->key] );
+		do_action( 'collection:' . $this->key . '/curated', $this, $calls[$this->key] );
 	}
 
 	/**

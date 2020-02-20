@@ -11,10 +11,7 @@
 	>
 	<testsuites>
 		<testsuite name="collection">
-			<file>tests/test-plugin.php</file>
-			<file>tests/test-simple.php</file>
-			<file>tests/test-expiration.php</file>
-			<file>tests/test-transient.php</file>
+			<directory prefix="test-" suffix=".php">./tests/</directory>
 		</testsuite>
 	</testsuites>
 	<filter>

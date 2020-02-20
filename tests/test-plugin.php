@@ -19,15 +19,6 @@ class Collection_Plugin_Test extends WP_UnitTestCase {
 		$this->assertEquals( static::$info['AuthorURI'], $url );
 	}
 
-	function test_class() {
-		$this->assertTrue( class_exists( 'Collection' ) );
-
-		$implements = class_implements( 'Collection' );
-		$this->assertContains( 'ArrayAccess', $implements );
-		$this->assertContains(   'Countable', $implements );
-		$this->assertContains(    'Iterator', $implements );
-	}
-
 	function test_helpers() {
 		$this->assertTrue( function_exists( 'register_collection' ) );
 		$this->assertTrue( function_exists(      'get_collection' ) );
