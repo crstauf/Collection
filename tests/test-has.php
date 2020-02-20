@@ -11,7 +11,7 @@ class Collection_Test_Has extends Collection_UnitTestCase {
 		$this->assertTrue( $collection->has( 4 ) );
 		$this->assertTrue( $collection->has( 'rand' ) );
 
-		$this->assertFalse( $collection->has( 'nothing' ) );
+		$this->assertFalse( $collection->has( '___nothing' ) );
 		$this->assertFalse( $collection->has( 99999 ) );
 	}
 

@@ -28,7 +28,7 @@ class Collection_Test_Callback extends Collection_UnitTestCase {
 	}
 
 	function test_uncallable_callback() {
-		$key = static::key( __FUNCTION__ );
+		$key = static::key( __METHOD__ );
 		@register_collection( $key, '___nonexistent_callback' );
 		$runtime = @$this->get_runtime( $key );
 

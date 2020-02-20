@@ -48,7 +48,7 @@ class Collection_Test_Class extends Collection_UnitTestCase {
 		$collection = $this->get_runtime( $key );
 
 		# Test offsetGet().
-		$this->assertEquals( 3, $collection[2] );
+		$this->assertEquals( static::collection_callback()[2], $collection[2] );
 
 		# Test offsetExists().
 		$this->assertTrue( isset( $collection[2] ) );
@@ -56,12 +56,12 @@ class Collection_Test_Class extends Collection_UnitTestCase {
 		# Test offsetSet().
 		$collection[2] = 10;
 		$this->assertNotEquals( 10, $collection[2] );
-		$this->assertEquals(     3, $collection[2] );
+		$this->assertEquals( static::collection_callback()[2], $collection[2] );
 
 		# Test offsetUnset().
 		unset( $collection[2] );
-		$this->assertNotEmpty(  $collection[2] );
-		$this->assertEquals( 3, $collection[2] );
+		$this->assertNotEmpty( $collection[2] );
+		$this->assertEquals( static::collection_callback()[2], $collection[2] );
 		$this->assertTrue( $collection->has( 2 ) );
 	}
 

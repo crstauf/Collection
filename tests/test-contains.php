@@ -3,14 +3,13 @@
 class Collection_Test_Contains extends Collection_UnitTestCase {
 
 	protected function _test( Collection $collection ) {
-		$this->assertTrue( $collection->contains( 1 ) );
-		$this->assertTrue( $collection->contains( 2 ) );
-		$this->assertTrue( $collection->contains( 3 ) );
-		$this->assertTrue( $collection->contains( 4 ) );
-		$this->assertTrue( $collection->contains( 5 ) );
+		$this->assertTrue( $collection->contains( static::range()[0] ) );
+		$this->assertTrue( $collection->contains( static::range()[1] ) );
+		$this->assertTrue( $collection->contains( static::range()[2] ) );
 		$this->assertTrue( $collection->contains( 'bar' ) );
 
-		$this->assertFalse( $collection->contains( 'foo'  ) );
+		$this->assertFalse( $collection->contains(   9999 ) );
+		$this->assertFalse( $collection->contains(  'foo' ) );
 		$this->assertFalse( $collection->contains( 'rand' ) );
 	}
 

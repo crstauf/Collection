@@ -60,6 +60,18 @@ class Collection_Test_Items extends Collection_UnitTestCase {
 		$this->_test_items( $this->get_transient( $key ) );
 	}
 
+	function test_equals() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+
+		$runtime   = $this->get_runtime( $key );
+		$cached    = $this->get_cached( $key );
+		$transient = $this->get_transient( $key );
+
+		$this->assertEquals( $runtime[2],    $cached[2] );
+		$this->assertEquals( $runtime[3], $transient[3] );
+		$this->assertEquals(  $cached[4], $transient[4] );
+	}
+
 
 	protected function _test_get_item( Collection $collection ) {
 		$this->assertEquals( static::collection_callback()[0],     $collection->get_item( 0 ) );

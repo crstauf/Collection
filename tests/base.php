@@ -16,14 +16,25 @@ abstract class Collection_UnitTestCase extends WP_UnitTestCase {
 	const LIFE = 1;
 
 	/**
+	 * Generate range of numbers.
+	 *
+	 * @return int[]
+	 */
+	protected static function range() {
+		return range( 1, 10, 2 );
+	}
+
+	/**
 	 * Collection data callback.
 	 *
+	 * @uses static::range()
 	 * @return array
 	 */
 	static function collection_callback() {
-		$items = range( 1, 5 );
+		$items = static::range();
 		$items['foo'] = 'bar';
 		$items['rand'] = mt_rand( 5, 9999 );
+
 		return $items;
 	}
 
