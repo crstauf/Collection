@@ -29,6 +29,16 @@ class Collection_Test_Items extends Collection_UnitTestCase {
 	}
 
 
+	/*
+	#### ######## ######## ##     ##  ######
+	 ##     ##    ##       ###   ### ##    ##
+	 ##     ##    ##       #### #### ##
+	 ##     ##    ######   ## ### ##  ######
+	 ##     ##    ##       ##     ##       ##
+	 ##     ##    ##       ##     ## ##    ##
+	####    ##    ######## ##     ##  ######
+	*/
+
 	protected function _test_items( Collection $collection ) {
 		$this->assertObjectHasAttribute( 'items', $collection );
 		$this->assertNotEmpty( $collection->items );
@@ -72,6 +82,68 @@ class Collection_Test_Items extends Collection_UnitTestCase {
 		$this->assertEquals(  $cached[4], $transient[4] );
 	}
 
+
+	/*
+	 ######   ######## ########    #### ######## ######## ##     ##  ######
+	##    ##  ##          ##        ##     ##    ##       ###   ### ##    ##
+	##        ##          ##        ##     ##    ##       #### #### ##
+	##   #### ######      ##        ##     ##    ######   ## ### ##  ######
+	##    ##  ##          ##        ##     ##    ##       ##     ##       ##
+	##    ##  ##          ##        ##     ##    ##       ##     ## ##    ##
+	 ######   ########    ##       ####    ##    ######## ##     ##  ######
+	*/
+
+	protected function _test_get_items( Collection $collection ) {
+		$from_callback = static::collection_callback();
+		$from_collection = $collection->get_items();
+
+		unset(
+			$from_callback['rand'],
+			$from_collection['rand']
+		);
+
+		$this->assertEquals( $from_callback, $from_collection );
+
+		add_filter( 'collection:' . $collection->key . '/items', '__return_true' );
+
+		$filter = ( array ) __return_true();
+		$filtered = $collection->get_items();
+
+		remove_filter( 'collection:' . $collection->key . '/items', '__return_true' );
+
+		$this->assertEquals( $filter, $filtered );
+		$this->assertNotEquals( $collection->items, $filtered );
+
+		$this->assertTrue(  $collection->contains( static::range()[1] ) );
+		$this->assertTrue(  $collection->has( 1 ) );
+		$this->assertFalse( $collection->contains( true ) );
+	}
+
+	function test_runtime_get_items() {
+		$key = $this->register_collection( __METHOD__ );
+		$this->_test_get_items( $this->get_runtime( $key ) );
+	}
+
+	function test_cached_get_items() {
+		$key = $this->register_collection( __METHOD__ );
+		$this->_test_get_items( $this->get_cached( $key ) );
+	}
+
+	function test_transient_get_items() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_get_items( $this->get_transient( $key ) );
+	}
+
+
+	/*
+	 ######   ######## ########    #### ######## ######## ##     ##
+	##    ##  ##          ##        ##     ##    ##       ###   ###
+	##        ##          ##        ##     ##    ##       #### ####
+	##   #### ######      ##        ##     ##    ######   ## ### ##
+	##    ##  ##          ##        ##     ##    ##       ##     ##
+	##    ##  ##          ##        ##     ##    ##       ##     ##
+	 ######   ########    ##       ####    ##    ######## ##     ##
+	*/
 
 	protected function _test_get_item( Collection $collection ) {
 		$this->assertEquals( static::collection_callback()[0],     $collection->get_item( 0 ) );

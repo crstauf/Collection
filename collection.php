@@ -323,20 +323,20 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$calls[$this->key]++;
 
 		# Start timer: getting items.
-		do_action( 'qm/start', 'collection:' . $this->key . '/_items' );
+		do_action( 'qm/start', 'collection:' . $this->key . '/set_items' );
 
 		# Get items from callback.
 		$items = call_user_func( $this->callback );
 
 		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/_items', 'from callback' );
+		do_action( 'qm/lap', 'collection:' . $this->key . '/set_items', 'from callback' );
 
-		# Filter items.
+		# Filter internal items.
 		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
 
 		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/_items', 'from filter' );
-		do_action( 'qm/stop', 'collection:' . $this->key . '/_items' );
+		do_action( 'qm/lap',  'collection:' . $this->key . '/set_items', 'from filter' );
+		do_action( 'qm/stop', 'collection:' . $this->key . '/set_items' );
 
 		# Set created time.
 		$this->created = date_create( 'now', new DateTimeZone( 'UTC' ) );
@@ -415,6 +415,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	/**
+	 * Get filtered items.
+	 *
+	 * @return array
+	 */
+	function get_items() {
+		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items );
+	}
+
+	/**
 	 * Get item at specified key.
 	 *
 	 * @param mixed $key
@@ -438,10 +447,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Check if value in Collection.
 	 *
 	 * @param mixed $value
+	 * @param bool $strict
 	 * @return bool
 	 */
-	function contains( $value ) {
-		return in_array( $value, $this->items );
+	function contains( $value, bool $strict = true ) {
+		return in_array( $value, $this->items, $strict );
 	}
 
 	/**

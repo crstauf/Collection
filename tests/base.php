@@ -59,7 +59,7 @@ abstract class Collection_UnitTestCase extends WP_UnitTestCase {
 	 */
 	protected function register_collection( $key_suffix, int $life = -1 ) {
 		$key = static::key( $key_suffix );
-		register_collection( $key, array( __CLASS__, 'collection_callback' ), $life );
+		register_collection( $key, array( get_class( $this ), 'collection_callback' ), $life );
 		return $key;
 	}
 
