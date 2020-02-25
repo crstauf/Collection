@@ -415,12 +415,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	/**
-	 * Get filtered items.
+	 * Get filtered (proper) items.
 	 *
 	 * @return array
 	 */
-	function get_items() {
-		return ( array ) apply_filters( 'collection:' . $this->key . '/items', $this->items );
+	function get_proper_items() {
+		return ( array ) apply_filters( 'collection:' . $this->key . '/proper_items', $this->items );
 	}
 
 	/**

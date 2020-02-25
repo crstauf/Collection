@@ -48,7 +48,7 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 	function test_posts() {
 		$key = $this->register_collection( __METHOD__ );
 
-		add_filter( 'collection:' . $key . '/items', function( $items ) { return array_map( 'get_post', $items ); } );
+		add_filter( 'collection:' . $key . '/proper_items', function( $items ) { return array_map( 'get_post', $items ); } );
 
 		$runtime = $this->get_runtime( $key );
 
@@ -57,7 +57,7 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 		$this->assertEquals( 'integer', gettype( $runtime[3] ) );
 		$this->assertTrue( $runtime->has( 0 ) );
 
-		$items = $runtime->get_items();
+		$items = $runtime->get_proper_items();
 		$this->assertEquals( count( $runtime ), count( $items ) );
 		$this->assertInstanceOf( 'WP_Post', $items[0] );
 	}
