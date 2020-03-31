@@ -19,11 +19,14 @@ cache:
 
 jobs:
   include:
-    - php: 7.3
+    - name: "PHP 7.3.16 Test"
+      php: 7.3.16
       env: WP_VERSION=latest
-    - php: 7.2
+    - name: "PHP 7.2.29 Test"
+      php: 7.2.29
       env: WP_VERSION=latest
-    - php: 7.1
+    - name: "PHP 7.1.18 Test"
+      php: 7.1.18
       env: WP_VERSION=latest
 
 before_script:

@@ -12,17 +12,13 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 				break;
 		}
 
-		if ( is_wp_error( $response ) ) {
-print_r( $response );
+		if ( is_wp_error( $response ) )
 			return array();
-		}
 
 		$data = json_decode( wp_remote_retrieve_body( $response ) );
 		shuffle( $data );
 
-		$posts = array_slice( $data, 0, 10 );
-echo __LINE__ . ': ' . print_r( $posts, true );
-		return $posts;
+		return array_slice( $data, 0, 10 );
 	}
 
 	protected static function create_sample_posts() {
@@ -35,18 +31,14 @@ echo __LINE__ . ': ' . print_r( $posts, true );
 				'post_title'   => $sample_post->title,
 			);
 
-		$post_ids = array_map( 'wp_insert_post', $sample_posts );
-echo __LINE__ . ': ' . print_r( $post_ids, true );
-		return $post_ids;
+		return array_map( 'wp_insert_post', $sample_posts );
 	}
 
 	static function setUpBeforeClass() {
 		static::$post_ids = static::create_sample_posts();
-echo __LINE__ . ': ' . print_r( static::$post_ids, true );
 	}
 
 	static function collection_callback() {
-echo __LINE__ . ': ' . print_r( static::$post_ids, true );
 		return static::$post_ids;
 	}
 
@@ -55,8 +47,7 @@ echo __LINE__ . ': ' . print_r( static::$post_ids, true );
 	 */
 	function test_posts() {
 		$key = $this->register_collection( __METHOD__ );
-echo __LINE__ . ': ' . print_r( static::$post_ids, true );
-echo __LINE__ . ': ' . print_r( static::collection_callback(), true );
+
 		add_filter( 'collection:' . $key . '/proper_items', function( $items ) { return array_map( 'get_post', $items ); } );
 
 		$runtime = $this->get_runtime( $key );
