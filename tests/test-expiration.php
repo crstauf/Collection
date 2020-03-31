@@ -1,25 +1,61 @@
 <?php
 
-require_once 'test-simple.php';
+class Collection_Test_Expiration extends Collection_UnitTestCase {
 
-/**
- * @todo define check that Collection expired
- */
-class Collection_Expiration_Test extends Collection_Simple_Test {
+	protected function _test_set_expiration( Collection $collection ) {
+		$this->assertInstanceOf( DateTime::class, $collection->expiration );
+		$this->assertGreaterThan( date_create( 'now', new DateTimeZone( 'UTC' ) ), $collection->expiration );
 
-	const LIFE = 5;
-
-	function setUp() {
-		if ( Collection::class() !== 'Collection' )
-			static::$classes[] = Collection::class();
-
-		register_collection( static::COLLECTION_KEY, array( __CLASS__, 'collection_callback' ), static::LIFE );
-		static::$collection = get_collection( static::COLLECTION_KEY );
+		$interval = new DateInterval( 'PT' . static::LIFE . 'S' );
+		$this->assertEquals( $collection->expiration->getTimestamp(), $collection->created->add( $interval )->getTimestamp() );
 	}
 
-	function test_in_transients() {
-		$transient = get_transient( Collection::transient_name( static::COLLECTION_KEY ) );
-		$this->assertInstanceOf( Collection::class(), $transient );
+	function test_runtime_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_runtime( $key ) );
+	}
+
+	function test_cached_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_cached( $key ) );
+	}
+
+	function test_transient_set_expiration() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->_test_set_expiration( $this->get_transient( $key ) );
+	}
+
+	/**
+	 * @group does_sleep
+	 */
+	function test_expires() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$this->get_runtime( $key );
+
+		sleep( static::LIFE + 1 );
+
+		$this->assertFalse( $this->_get_transient( $key ) );
+	}
+
+	/**
+	 * @group does_sleep
+	 */
+	function test_restored_after_refresh() {
+		$key = $this->register_collection( __METHOD__, static::LIFE );
+		$runtime = $this->get_runtime( $key );
+
+		sleep( static::LIFE + 1 );
+
+		$this->assertFalse( $this->_get_transient( $key ) );
+
+		$runtime->refresh();
+
+		# Use get_option() instead of get_transient() due to
+		# WordPress caching behavior.
+		$option = $this->_get_option( $key );
+
+		$this->assertNotFalse( $option );
+		$this->assertInstanceOf( Collection::class, $option );
 	}
 
 }
