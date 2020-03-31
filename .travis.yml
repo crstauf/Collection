@@ -27,8 +27,6 @@ jobs:
       php: 7.1.18
     - name: "PHP 7.0.32 Test"
       php: 7.0.32
-    - name: "PHP 5.6.37 Test"
-      php: 5.6.37
 
 env:
     - WP_VERSION=latest
@@ -44,7 +42,7 @@ before_script:
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
       bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
-      composer global require "phpunit/phpunit=5.7.*|7.5.*"
+      composer global require "phpunit/phpunit=6.*|7.5.*"
     fi
   - |
     if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
