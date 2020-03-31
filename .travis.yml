@@ -1,7 +1,8 @@
-sudo: false
 dist: trusty
 
 language: php
+
+os: linux
 
 notifications:
   email:
@@ -10,29 +11,20 @@ notifications:
 
 branches:
   only:
-    - master
+    - issue/7
 
 cache:
   directories:
     - $HOME/.composer/cache
 
-matrix:
+jobs:
   include:
+    - php: 7.3
+      env: WP_VERSION=latest
     - php: 7.2
       env: WP_VERSION=latest
     - php: 7.1
       env: WP_VERSION=latest
-    - php: 7.0
-      env: WP_VERSION=latest
-    - php: 5.6
-      env: WP_VERSION=latest
-    - php: 5.6
-      env: WP_VERSION=trunk
-    - php: 5.6
-      env: WP_TRAVISCI=phpcs
-    - php: 5.3
-      env: WP_VERSION=latest
-      dist: precise
 
 before_script:
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
@@ -45,7 +37,7 @@ before_script:
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
       bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
-      composer global require "phpunit/phpunit=4.8.*|5.7.*"
+      composer global require "phpunit/phpunit=^7.0"
     fi
   - |
     if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
@@ -58,8 +50,4 @@ script:
     if [[ ! -z "$WP_VERSION" ]] ; then
       phpunit
       WP_MULTISITE=1 phpunit
-    fi
-  - |
-    if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
-      phpcs
     fi
