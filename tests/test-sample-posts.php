@@ -12,13 +12,17 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 				break;
 		}
 
-		if ( is_wp_error( $response ) )
+		if ( is_wp_error( $response ) ) {
+print_r( $response );
 			return array();
+		}
 
 		$data = json_decode( wp_remote_retrieve_body( $response ) );
 		shuffle( $data );
 
-		return array_slice( array_values( $data ), 0, 10 );
+		$posts = array_slice( $data, 0, 10 );
+echo __LINE__ . ': ' . print_r( $posts, true );
+		return $posts;
 	}
 
 	protected static function create_sample_posts() {
