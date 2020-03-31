@@ -51,10 +51,7 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 		add_filter( 'collection:' . $key . '/proper_items', function( $items ) { return array_map( 'get_post', $items ); } );
 
 		$runtime = $this->get_runtime( $key );
-$keys = array();
-foreach ( $runtime as $key => $value )
-	$keys[] = $key;
-print_r( $keys );
+print_r( $runtime );
 		$this->assertEquals( count( static::collection_callback() ), count( $runtime ) );
 		$this->assertEquals( static::collection_callback()[3], $runtime[3] );
 		$this->assertEquals( 'integer', gettype( $runtime[3] ) );
