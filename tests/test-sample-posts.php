@@ -31,14 +31,18 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 				'post_title'   => $sample_post->title,
 			);
 
-		return array_map( 'wp_insert_post', $sample_posts );
+		$post_ids = array_map( 'wp_insert_post', $sample_posts );
+echo __LINE__ . ': ' . print_r( $post_ids, true );
+		return $post_ids;
 	}
 
 	static function setUpBeforeClass() {
 		static::$post_ids = static::create_sample_posts();
+echo __LINE__ . ': ' . print_r( static::$post_ids, true );
 	}
 
 	static function collection_callback() {
+echo __LINE__ . ': ' . print_r( static::$post_ids, true );
 		return static::$post_ids;
 	}
 
@@ -47,11 +51,12 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 	 */
 	function test_posts() {
 		$key = $this->register_collection( __METHOD__ );
-
+echo __LINE__ . ': ' . print_r( static::$post_ids, true );
+echo __LINE__ . ': ' . print_r( static::collection_callback(), true );
 		add_filter( 'collection:' . $key . '/proper_items', function( $items ) { return array_map( 'get_post', $items ); } );
 
 		$runtime = $this->get_runtime( $key );
-print_r( $runtime );
+
 		$this->assertEquals( count( static::collection_callback() ), count( $runtime ) );
 		$this->assertEquals( static::collection_callback()[3], $runtime[3] );
 		$this->assertEquals( 'integer', gettype( $runtime[3] ) );
