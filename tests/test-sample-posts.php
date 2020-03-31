@@ -18,7 +18,7 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 		$data = json_decode( wp_remote_retrieve_body( $response ) );
 		shuffle( $data );
 
-		return array_slice( $data, 0, 10 );
+		return array_slice( array_values( $data ), 0, 10 );
 	}
 
 	protected static function create_sample_posts() {
@@ -53,7 +53,6 @@ class Collection_Test_SamplePosts extends Collection_UnitTestCase {
 		$runtime = $this->get_runtime( $key );
 
 		$this->assertEquals( count( static::collection_callback() ), count( $runtime ) );
-		$this->assertEquals( array_keys( static::collection_callback() ), array_keys( $runtime->get_proper_items() ) );
 		$this->assertEquals( static::collection_callback()[3], $runtime[3] );
 		$this->assertEquals( 'integer', gettype( $runtime[3] ) );
 		$this->assertTrue( $runtime->has( 0 ) );
