@@ -28,6 +28,9 @@ jobs:
     - name: "PHP 7.1.18 Test"
       php: 7.1.18
       env: WP_VERSION=latest
+    - name: "PHP 5.6.37 Test"
+      php: 5.6.37
+      env: WP_VERSION=latest
 
 before_script:
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
