@@ -21,19 +21,17 @@ jobs:
   include:
     - name: "PHP 7.3.16 Test"
       php: 7.3.16
-      env: WP_VERSION=latest
     - name: "PHP 7.2.29 Test"
       php: 7.2.29
-      env: WP_VERSION=latest
     - name: "PHP 7.1.18 Test"
       php: 7.1.18
-      env: WP_VERSION=latest
     - name: "PHP 7.0.32 Test"
       php: 7.0.32
-      env: WP_VERSION=latest
     - name: "PHP 5.6.37 Test"
       php: 5.6.37
-      env: WP_VERSION=latest
+
+env:
+    - WP_VERSION=latest
 
 before_script:
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
@@ -46,7 +44,7 @@ before_script:
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
       bash bin/install-wp-tests.sh wordpress_test root '' localhost $WP_VERSION
-      composer global require "phpunit/phpunit=^5.0"
+      composer global require "phpunit/phpunit=5.7.*|7.5.*"
     fi
   - |
     if [[ "$WP_TRAVISCI" == "phpcs" ]] ; then
