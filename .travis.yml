@@ -17,17 +17,20 @@ cache:
   directories:
     - $HOME/.composer/cache
 
-jobs:
-  include:
-    - name: "PHP 7.3.16 Test"
-      php: 7.3.16
-    - name: "PHP 7.2.29 Test"
-      php: 7.2.29
-    - name: "PHP 7.1.18 Test"
-      php: 7.1.18
+php:
+  - 7.1.18
+  - 7.2.29
+  - 7.3.16
 
 env:
-    - WP_VERSION=latest
+  - WP_VERSION=5.4 WP_MULTISITE=0
+  - WP_VERSION=5.4 WP_MULTISITE=1
+  - WP_VERSION=5.3 WP_MULTISITE=0
+  - WP_VERSION=5.3 WP_MULTISITE=1
+  - WP_VERSION=5.2 WP_MULTISITE=0
+  - WP_VERSION=5.2 WP_MULTISITE=1
+  - WP_VERSION=5.1 WP_MULTISITE=0
+  - WP_VERSION=5.1 WP_MULTISITE=1
 
 before_script:
   - export PATH="$HOME/.composer/vendor/bin:$PATH"
