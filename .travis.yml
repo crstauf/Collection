@@ -55,5 +55,5 @@ script:
   - set -v
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
-      phpunit -v --coverage-text
+      phpunit -v
     fi
