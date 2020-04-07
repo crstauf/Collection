@@ -52,7 +52,8 @@ before_script:
     fi
 
 script:
+  - set -v
   - |
     if [[ ! -z "$WP_VERSION" ]] ; then
-      phpunit
+      phpunit -v
     fi
