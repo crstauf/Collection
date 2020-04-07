@@ -33,7 +33,7 @@ abstract class Collection_UnitTestCase extends WP_UnitTestCase {
 	static function collection_callback() {
 		$items = static::range();
 		$items['foo'] = 'bar';
-		$items['rand'] = mt_rand( 5, 9998 );
+		$items['rand'] = mt_rand( 10, 99999 );
 
 		return $items;
 	}

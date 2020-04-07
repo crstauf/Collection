@@ -8,19 +8,17 @@
  * Version: 2.0
  */
 
-defined( 'LOG_COLLECTION_ACCESS' ) || define( 'LOG_COLLECTION_ACCESS', false );
-
 /**
  * Collection.
- *
- * @todo add duplication detection
  */
 class Collection implements ArrayAccess, Countable, Iterator {
 
 	/**
-	 * @var array Registered Collection keys.
+	 * @var array $registered Registered Collection keys.
+	 * @var array $hashes Hashes of constructed Collection items.
 	 */
 	protected static $registered = array();
+	protected static $hashes = array();
 
 	/**
 	 * @var string $key
@@ -202,6 +200,57 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			trigger_error( sprintf( 'Collection <code>%s</code> has been constructed %d times; should only be once per page load.', $key, $calls[$key] ) );
 	}
 
+	/**
+	 * Maybe check for Collections with duplicate items if constant set.
+	 *
+	 * @param Collection $collection
+	 * @uses static::check_duplicates()
+	 */
+	protected static function maybe_check_duplicates( Collection $collection ) {
+		if (
+			!defined( 'CHECK_COLLECTION_DUPLICATES' )
+			|| !CHECK_COLLECTION_DUPLICATES
+		)
+			return;
+
+		static::check_duplicates( $collection );
+	}
+
+	/**
+	 * Check for Collections with duplicate items if constant set.
+	 *
+	 * @param Collection $collection
+	 * @uses static::items_hash()
+	 */
+	protected static function check_duplicates( Collection $collection ) {
+		$hash = static::items_hash( $collection );
+		$keys = array_keys( static::$hashes, $hash, true );
+
+		if ( !empty( $keys ) ) {
+			trigger_error( sprintf( 'Collection <code>%s</code> is duplicate of: <code>%s</code>.', $collection->key, implode( '</code>, <code>', $keys ) ) );
+
+			do_action( 'collection/found_duplicate', $collection, $keys );
+			do_action( 'collection:' . $collection->key . '/found_duplicate', $keys );
+
+			return;
+		}
+
+		static::$hashes[$collection->key] = $hash;
+	}
+
+	/**
+	 * Generate hash of Collection's items.
+	 *
+	 * @param Collection $collection
+	 * @return string
+	 */
+	protected static function items_hash( Collection $collection ) {
+		$items = $collection->items;
+		ksort( $items );
+
+		return md5( serialize( $items ) );
+	}
+
 
 	/*
 	##     ##    ###     ######   ####  ######
@@ -324,6 +373,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 	/**
 	 * Set items.
+	 *
+	 * @uses static::maybe_check_duplicates()
 	 */
 	protected function set_items() {
 		static $calls = array();
@@ -351,6 +402,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		# Set created time.
 		$this->created = date_create( 'now', new DateTimeZone( 'UTC' ) );
+
+		static::maybe_check_duplicates( $this );
 
 		do_action( 'collection_curated', $this->key, $this, $calls[$this->key] );
 		do_action( 'collection:' . $this->key . '/curated', $this, $calls[$this->key] );
@@ -422,7 +475,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @uses $this->log_access()
 	 */
 	protected function maybe_log_access() {
-		if ( !LOG_COLLECTION_ACCESS )
+		if (
+			!defined( 'LOG_COLLECTION_ACCESS' )
+			|| !LOG_COLLECTION_ACCESS
+		)
 			return;
 
 		$this->log_access();
