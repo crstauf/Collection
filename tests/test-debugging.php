@@ -1,5 +1,8 @@
 <?php
 
+/**
+ * @group debugging
+ */
 class Collection_Test_Debugging extends Collection_UnitTestCase {
 
 	static function collection_callback_no_rand() {
@@ -11,6 +14,7 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 
 	/**
 	 * @runInSeparateProcess
+	 * @group access_log
 	 */
 	function test_access_log() {
 		define( 'LOG_COLLECTION_ACCESS', true );
@@ -19,32 +23,23 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 		$runtime = $this->get_runtime( $key );
 		$count = 0;
 
-		$runtime->items;
-		$count++;
+		$this->assertEmpty( $runtime->access_log );
 
-		$this->assertNotEmpty( $runtime->access_log );
-		$this->assertEquals( $count, count( $runtime->access_log ) );
+		$runtime->items;
+		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->access_log` was not logged.' );
 		$this->assertEquals( 'string', gettype( current( $runtime->access_log ) ) );
 
 		$runtime->get_item( 0 );
-		$count++;
-
-		$this->assertEquals( $count, count( $runtime->access_log ) );
+		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->get_item()` was not logged.' );
 
 		$runtime->get_proper_items();
-		$count++;
-
-		$this->assertEquals( $count, count( $runtime->access_log ) );
+		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->get_proper_items()` was not logged.' );
 
 		foreach ( $runtime as $v ) {}
-		$count++;
-
-		$this->assertEquals( $count, count( $runtime->access_log ) );
+		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `foreach( Collection => $v )` was not logged.' );
 
 		$runtime[0];
-		$count++;
-
-		$this->assertEquals( $count, count( $runtime->access_log ) );
+		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection[0]` was not logged.' );
 
 		$log_times = array_keys( $runtime->access_log );
 		$this->assertEquals( 'string', gettype( $log_times[0] ) );
@@ -57,6 +52,9 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 		$this->assertEmpty( $transient->access_log );
 	}
 
+	/**
+	 * @group access_log
+	 */
 	function test_not_logging_access() {
 		$key = $this->register_collection( __METHOD__, 5 );
 		$runtime = $this->get_runtime( $key );
@@ -71,6 +69,7 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 
 	/**
 	 * @runInSeparateProcess
+	 * @group check_duplicates
 	 */
 	function test_check_duplicates() {
 		define( 'CHECK_COLLECTION_DUPLICATES', true );
@@ -98,6 +97,9 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 		$runtimes[] = $this->get_runtime( end( $keys ) );
 	}
 
+	/**
+	 * @group check_duplicates
+	 */
 	function test_not_checking_duplicates() {
 		$key = static::key( __METHOD__ );
 		register_collection( $key, array( __CLASS__, 'collection_callback_no_rand' ) );
