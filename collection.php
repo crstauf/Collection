@@ -8,11 +8,12 @@
  * Version: 2.0
  */
 
+defined( 'LOG_COLLECTION_ACCESS' ) || define( 'LOG_COLLECTION_ACCESS', false );
+
 /**
  * Collection.
  *
  * @todo add duplication detection
- * @todo add usage tracking
  */
 class Collection implements ArrayAccess, Countable, Iterator {
 
@@ -27,6 +28,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @var null|callback $callback
 	 * @var array $items
 	 * @var string $source
+	 * @var array $access_log
 	 */
 	protected $key = '';
 	protected $created = null;
@@ -34,6 +36,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected $callback = null;
 	protected $items = array();
 	protected $source = 'runtime';
+	protected $access_log = array();
 
 
 	/*
@@ -251,6 +254,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Getter.
 	 *
 	 * @param string $key
+	 * @uses $this->maybe_log_access()
 	 * @return mixed
 	 */
 	function __get( $key ) {
@@ -259,9 +263,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			'items',
 			'source',
 			'created',
+			'access_log',
 			'expiration',
 		) ) )
 			return;
+
+		if ( 'items' === $key )
+			$this->maybe_log_access();
 
 		return $this->$key;
 	}
@@ -406,6 +414,29 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$set = set_transient( static::transient_key( $this->key ), $transient, $life );
 	}
 
+	/**
+	 * Maybe log access.
+	 *
+	 * Log access if `LOG_COLLECTION_ACCESS` constant is true.
+	 *
+	 * @uses $this->log_access()
+	 */
+	protected function maybe_log_access() {
+		if ( !LOG_COLLECTION_ACCESS )
+			return;
+
+		$this->log_access();
+	}
+
+	/**
+	 * Log stack trace.
+	 */
+	protected function log_access() {
+		$log = apply_filters( 'collection/access_log', wp_debug_backtrace_summary( Collection::class ), $this );
+		$log = apply_filters( 'collection:' . $this->key . '/access_log', $log );
+		$this->access_log[( string ) microtime( true )] = $log;
+	}
+
 
 	/*
 	#### ######## ######## ##     ##  ######
@@ -420,9 +451,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Get filtered (proper) items.
 	 *
+	 * @uses $this->maybe_log_access()
 	 * @return array
 	 */
 	function get_proper_items() {
+		$this->maybe_log_access();
 		return ( array ) apply_filters( 'collection:' . $this->key . '/proper_items', $this->items );
 	}
 
@@ -430,9 +463,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * Get item at specified key.
 	 *
 	 * @param mixed $key
+	 * @uses $this->maybe_log_access()
 	 * @return mixed
 	 */
 	function get_item( $key ) {
+		$this->maybe_log_access();
 		return $this->items[$key];
 	}
 
@@ -488,7 +523,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return isset( $this->items[$offset] );
 	}
 
+	/**
+	 * @uses $this->maybe_log_access()
+	 */
 	function offsetGet( $offset ) {
+		$this->maybe_log_access();
 		return $this->items[$offset];
 	}
 
@@ -522,6 +561,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	function rewind() {
+		$this->maybe_log_access();
 		reset( $this->items );
 	}
 
