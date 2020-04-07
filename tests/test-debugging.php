@@ -16,11 +16,6 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 		$this->assertEquals( $count, count( $runtime->access_log ) );
 		$this->assertEquals( 'string', gettype( current( $runtime->access_log ) ) );
 
-		$runtime[0];
-		$count++;
-
-		$this->assertEquals( $count, count( $runtime->access_log ) );
-
 		$runtime->get_item( 0 );
 		$count++;
 
@@ -32,6 +27,11 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 		$this->assertEquals( $count, count( $runtime->access_log ) );
 
 		foreach ( $runtime as $k => $v ) {}
+		$count++;
+
+		$this->assertEquals( $count, count( $runtime->access_log ) );
+
+		$runtime[0];
 		$count++;
 
 		$this->assertEquals( $count, count( $runtime->access_log ) );
