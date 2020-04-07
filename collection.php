@@ -10,6 +10,9 @@
 
 /**
  * Collection.
+ *
+ * @todo add duplication detection
+ * @todo add usage tracking
  */
 class Collection implements ArrayAccess, Countable, Iterator {
 
