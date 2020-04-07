@@ -13,6 +13,21 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 	}
 
 	/**
+	 * @group access_log
+	 */
+	function test_not_logging_access() {
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
+
+		$runtime->get_item( 0 );
+		$runtime->get_proper_items();
+		foreach ( $runtime as $v ) {}
+		$runtime[0];
+
+		$this->assertEmpty( $runtime->access_log );
+	}
+
+	/**
 	 * @runInSeparateProcess
 	 * @group access_log
 	 */
@@ -21,25 +36,11 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 
 		$key = $this->register_collection( __METHOD__, 5 );
 		$runtime = $this->get_runtime( $key );
-		$count = 0;
-
-		$this->assertEmpty( $runtime->access_log );
-
-		$runtime->items;
-		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->access_log` was not logged.' );
-		$this->assertEquals( 'string', gettype( current( $runtime->access_log ) ) );
 
 		$runtime->get_item( 0 );
-		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->get_item()` was not logged.' );
+		$access_log = $runtime->access_log;
 
-		$runtime->get_proper_items();
-		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection->get_proper_items()` was not logged.' );
-
-		foreach ( $runtime as $v ) {}
-		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `foreach( Collection => $v )` was not logged.' );
-
-		$runtime[0];
-		$this->assertEquals( ++$count, count( $runtime->access_log ), 'Access by `Collection[0]` was not logged.' );
+		$this->assertEquals( 'string', gettype( end( $access_log ) ) );
 
 		$log_times = array_keys( $runtime->access_log );
 		$this->assertEquals( 'string', gettype( $log_times[0] ) );
@@ -53,18 +54,83 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 	}
 
 	/**
+	 * @runInSeparateProcess
 	 * @group access_log
 	 */
-	function test_not_logging_access() {
+	function test_access_property_logged() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
 		$key = $this->register_collection( __METHOD__, 5 );
 		$runtime = $this->get_runtime( $key );
 
-		$runtime->get_item( 0 );
-		$runtime->get_proper_items();
-		foreach ( $runtime as $v ) {}
-		$runtime[0];
+		$this->assertEmpty( $runtime->access_log );
+
+		$runtime->items;
+		$this->assertEquals( 1, count( $runtime->access_log ), 'Access by `Collection->access_log` was not logged.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @group access_log
+	 */
+	function test_access_getItem_logged() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
 
 		$this->assertEmpty( $runtime->access_log );
+
+		$runtime->get_item( 0 );
+		$this->assertEquals( 1, count( $runtime->access_log ), 'Access by `Collection->get_item()` was not logged.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @group access_log
+	 */
+	function test_access_getProperItems_logged() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
+
+		$this->assertEmpty( $runtime->access_log );
+
+		$runtime->get_proper_items();
+		$this->assertEquals( 1, count( $runtime->access_log ), 'Access by `Collection->get_proper_items()` was not logged.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @group access_log
+	 */
+	function test_access_foreach_logged() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
+
+		$this->assertEmpty( $runtime->access_log );
+
+		foreach ( $runtime as $v ) {}
+		$this->assertEquals( 1, count( $runtime->access_log ), 'Access by `foreach( Collection => $v )` was not logged.' );
+	}
+
+	/**
+	 * @runInSeparateProcess
+	 * @group access_log
+	 */
+	function test_access_key_logged() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
+
+		$this->assertEmpty( $runtime->access_log );
+
+		$runtime[0];
+		$this->assertEquals( 1, count( $runtime->access_log ), 'Access by `Collection[0]` was not logged.' );
 	}
 
 	/**
