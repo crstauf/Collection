@@ -135,6 +135,44 @@ class Collection_Test_Debugging extends Collection_UnitTestCase {
 
 	/**
 	 * @runInSeparateProcess
+	 * @group access_log
+	 */
+	function test_multiple_access_logs() {
+		define( 'LOG_COLLECTION_ACCESS', true );
+
+		$key = $this->register_collection( __METHOD__, 5 );
+		$runtime = $this->get_runtime( $key );
+
+		$this->assertEmpty( $runtime->access_log );
+		$count = 0;
+
+		$runtime->get_item( 0 );
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		$runtime->get_proper_items();
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		foreach ( $runtime as $v ) {}
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		$runtime[0];
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		$runtime[0];
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		foreach ( $runtime as $v ) {}
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		$runtime->get_proper_items();
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+
+		$runtime->get_item( 0 );
+		$this->assertEquals( ++$count, count( $runtime->access_log ) );
+	}
+
+	/**
+	 * @runInSeparateProcess
 	 * @group check_duplicates
 	 */
 	function test_check_duplicates() {
