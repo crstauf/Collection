@@ -490,7 +490,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	protected function log_access() {
 		$log = apply_filters( 'collection/access_log', wp_debug_backtrace_summary( Collection::class ), $this );
 		$log = apply_filters( 'collection:' . $this->key . '/access_log', $log );
-		$this->access_log[( string ) microtime( true )] = $log;
+
+		$microtime = microtime( true );
+
+		while ( isset( $this->access_log[$microtime] ) )
+			$microtime += 0.0001;
+
+		$this->access_log[( string ) $microtime] = $log;
 	}
 
 
