@@ -494,7 +494,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$microtime = microtime( true );
 
 		while ( isset( $this->access_log[( string ) $microtime] ) )
-			$microtime += 0.0001;
+			$microtime += 0.00001;
 
 		$this->access_log[( string ) $microtime] = $log;
 	}
