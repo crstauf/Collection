@@ -149,13 +149,6 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	/**
-	 * @return string
-	 */
-	protected function cache_key() : string {
-		return sprintf( 'collection__%s', $this->key );
-	}
-
-	/**
 	 * @return $this
 	 */
 	public function debug() : self {
@@ -216,11 +209,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 	/*
 	#### ##    ##  ######  ########    ###    ##    ##  ######  ########
- 	##  ###   ## ##    ##    ##      ## ##   ###   ## ##    ## ##
- 	##  ####  ## ##          ##     ##   ##  ####  ## ##       ##
- 	##  ## ## ##  ######     ##    ##     ## ## ## ## ##       ######
- 	##  ##  ####       ##    ##    ######### ##  #### ##       ##
- 	##  ##   ### ##    ##    ##    ##     ## ##   ### ##    ## ##
+	 ##  ###   ## ##    ##    ##      ## ##   ###   ## ##    ## ##
+	 ##  ####  ## ##          ##     ##   ##  ####  ## ##       ##
+	 ##  ## ## ##  ######     ##    ##     ## ## ## ## ##       ######
+	 ##  ##  ####       ##    ##    ######### ##  #### ##       ##
+	 ##  ##   ### ##    ##    ##    ##     ## ##   ### ##    ## ##
 	#### ##    ##  ######     ##    ##     ## ##    ##  ######  ########
 	*/
 
@@ -236,6 +229,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		add_action( $hook . '->expire()', static function () use ( $key ) : void {
 			Collection::get( $key )->expire();
+		} );
+		
+		add_filter( $hook . '->has_expired()', static function ( bool $has_expired ) use ( $key ) : bool {
+			return Collection::get( $key )->has_expired();
 		} );
 
 		add_filter( $hook . '->items()', static function ( array $items ) use ( $key ) : array {
@@ -338,6 +335,13 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
+	 * @return string
+	 */
+	protected function cache_key() : string {
+		return sprintf( 'collection__%s', $this->key );
+	}
+
+	/**
 	 * $life === 0: does not expire
 	 * $life === -1: no caching
 	 *
@@ -354,16 +358,16 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			'refreshed'  => $this->refreshed,
 			'expiration' => $this->expiration,
 			'items'      => $this->items,
-			'source'     => 'transient',
 		);
 
 		if ( 0 === $this->life ) {
 			$value['source'] = 'option';
-			$result = update_option( $this->cache_key(), $value, false );
+			$result          = update_option( $this->cache_key(), $value, false );
 		}
 
 		if ( ! empty( $this->expiration ) ) {
-			$result = set_transient( $this->cache_key(), $value, $this->life );
+			$value['source'] = 'transient';
+			$result          = set_transient( $this->cache_key(), $value, $this->life );
 		}
 
 		if ( ! $result ) {
@@ -582,6 +586,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 }
 
+add_action( 'collection:register', static function ( string $key, $callback = null, int $life = -1, bool $debug = false ) : void {
+	Collection::register( $key, $callback, $life, $debug );
+}, 10, 4 );
+
 add_action( 'collection:refresh', static function ( string $key ) : void {
 	Collection::get( $key )->refresh();
 } );
@@ -589,6 +597,10 @@ add_action( 'collection:refresh', static function ( string $key ) : void {
 add_action( 'collection:expire', static function ( string $key ) : void {
 	Collection::get( $key )->expire();
 } );
+
+add_filter( 'collection:expired', static function ( bool $expired, string $key ) : bool {
+	return Collection::get( $key )->has_expired();
+}, 10, 2 );
 
 add_filter( 'collection:items', static function ( array $items, string $key ) : array {
 	return Collection::get( $key )->items();
