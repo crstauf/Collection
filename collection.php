@@ -5,7 +5,7 @@
  * Description: Manage collections of anything in WordPress.
  * Author: Caleb Stauffer
  * Author URI: https://develop.calebstauffer.com
- * Version: 2.0
+ * Version: 3.0
  */
 
 /**
@@ -13,28 +13,11 @@
  */
 class Collection implements ArrayAccess, Countable, Iterator {
 
-	/**
-	 * @var array $registered Registered Collection keys.
-	 * @var array $hashes Hashes of constructed Collection items.
-	 */
-	protected static $registered = array();
-	protected static $hashes = array();
-
-	/**
-	 * @var string $key
-	 * @var null|DateTime $created
-	 * @var null|callback $callback
-	 * @var array $items
-	 * @var string $source
-	 * @var array $access_log
-	 */
-	protected $key = '';
-	protected $created = null;
+	protected $created    = null;
 	protected $expiration = null;
-	protected $callback = null;
-	protected $items = array();
-	protected $source = 'runtime';
-	protected $access_log = array();
+	protected $callback   = null;
+	protected $items      = array();
+	protected $source     = 'runtime';
 
 
 	/*
@@ -48,42 +31,6 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	/**
-	 * Transient key.
-	 *
-	 * @param string $key
-	 * @return string
-	 */
-	static function transient_key( $key ) {
-		return Collection::class . '_' . $key;
-	}
-
-	/**
-	 * Format Collection key.
-	 *
-	 * @param string|int $key
-	 * @param null|string $context
-	 * @return string
-	 */
-	static function format_key( $key, $context = null ) {
-		$key = ( string ) apply_filters( 'collection/key', $key );
-
-		if ( !empty( $context ) )
-			$key = ( string ) apply_filters( 'collection/key/' . $context, $key );
-
-		return $key;
-	}
-
-	/**
-	 * Check if registered.
-	 *
-	 * @param string $key
-	 * @return bool
-	 */
-	static function is_registered( string $key ) {
-		return isset( static::$registered[$key] );
-	}
-
-	/**
 	 * Register Collection.
 	 *
 	 * @param mixed $key
@@ -92,163 +39,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @uses static::format_key()
 	 * @uses static::is_registered()
 	 */
-	static function register( $key, $callback = null, int $life = -1 ) {
-		$key = static::format_key( $key, 'register' );
+	public static function register( $key, $callback = null, int $life = -1 ) {
 
-		# Check if already registered.
-		if ( static::is_registered( $key ) ) {
-			trigger_error( sprintf( 'Collection <code>%s</code> is already registered.', $key ) );
-			return;
-		}
-
-		# Store config.
-		static::$registered[$key] = array(
-			'callback' => $callback,
-			    'life' => $life,
-		);
-
-		# Do actions.
-		do_action( 'collection_registered', $key );
-		do_action( 'collection:' . $key . '/registered' );
 	}
 
 	/**
-	 * Get Collection.
-	 *
-	 * @param mixed $key
-	 * @uses static::format_key()
-	 * @uses static::get_from_cache()
-	 * @uses static::get_from_transient()
-	 * @uses static::is_registered()
-	 * @return self
+	 * Get registered Collection.
 	 */
-	static function get( $key ) {
-		$key = static::format_key( $key, 'get' );
+	public static function get( $key ) {
 
-		# Get from cache.
-		$cache = static::get_from_cache( $key );
-
-		if ( !empty( $cache ) )
-			return $cache;
-
-		# Get from transient.
-		$transient = static::get_from_transient( $key );
-
-		if ( !empty( $transient ) )
-			return $transient;
-
-		# Check if not registered.
-		if ( !static::is_registered( $key ) ) {
-			trigger_error( sprintf( 'Collection <code>%s</code> is not registered.', $key ) );
-
-			# Return empty Collection.
-			return new self( $key, '__return_empty_array' );
-		}
-
-		# Get registered settings.
-		$registered = static::$registered[$key];
-
-		return new self( $key, $registered['callback'], $registered['life'] );
-	}
-
-	/**
-	 * Get Collection from cache.
-	 *
-	 * @param string $key
-	 * @uses wp_cache_get()
-	 * @return self|false
-	 */
-	protected static function get_from_cache( $key ) {
-		$found = false;
-		$cached = wp_cache_get( $key, Collection::class, true, $found );
-
-		if ( !$found )
-			return false;
-
-		return $cached;
-	}
-
-	/**
-	 * Get Collection from transient.
-	 *
-	 * @param string $key
-	 * @uses static::transient_key()
-	 * @return self|false
-	 */
-	protected static function get_from_transient( $key ) {
-		$transient = get_transient( static::transient_key( $key ) );
-
-		return !empty( $transient )
-			? $transient
-			: false;
-	}
-
-	/**
-	 * Count number of constructs.
-	 *
-	 * @param string $key
-	 */
-	protected static function track_constructs( string $key ) {
-		static $calls = array();
-
-		if ( !isset( $calls[$key] ) )
-			$calls[$key] = 0;
-
-		$calls[$key]++;
-
-		if ( 1 !== $calls[$key] )
-			trigger_error( sprintf( 'Collection <code>%s</code> has been constructed %d times; should only be once per page load.', $key, $calls[$key] ) );
-	}
-
-	/**
-	 * Maybe check for Collections with duplicate items if constant set.
-	 *
-	 * @param Collection $collection
-	 * @uses static::check_duplicates()
-	 */
-	protected static function maybe_check_duplicates( Collection $collection ) {
-		if (
-			!defined( 'CHECK_COLLECTION_DUPLICATES' )
-			|| !CHECK_COLLECTION_DUPLICATES
-		)
-			return;
-
-		static::check_duplicates( $collection );
-	}
-
-	/**
-	 * Check for Collections with duplicate items if constant set.
-	 *
-	 * @param Collection $collection
-	 * @uses static::items_hash()
-	 */
-	protected static function check_duplicates( Collection $collection ) {
-		$hash = static::items_hash( $collection );
-		$keys = array_keys( static::$hashes, $hash, true );
-
-		if ( !empty( $keys ) ) {
-			trigger_error( sprintf( 'Collection <code>%s</code> is duplicate of: <code>%s</code>.', $collection->key, implode( '</code>, <code>', $keys ) ) );
-
-			do_action( 'collection/found_duplicate', $collection, $keys );
-			do_action( 'collection:' . $collection->key . '/found_duplicate', $keys );
-
-			return;
-		}
-
-		static::$hashes[$collection->key] = $hash;
-	}
-
-	/**
-	 * Generate hash of Collection's items.
-	 *
-	 * @param Collection $collection
-	 * @return string
-	 */
-	protected static function items_hash( Collection $collection ) {
-		$items = $collection->items;
-		ksort( $items );
-
-		return md5( serialize( $items ) );
 	}
 
 
@@ -265,309 +64,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Construct.
 	 *
-	 * @param mixed $key
-	 * @param callback|array $items
-	 * @param int $life
-	 *
-	 * @uses static::format_key()
-	 * @uses static::track_constructs()
-	 * @uses $this->set_callback()
-	 * @uses $this->set_items()
-	 * @uses $this->maybe_set_expiration()
-	 * @uses $this->save()
+	 * @param array $items
 	 */
-	function __construct( $key, $callback = null, int $life = -1 ) {
-		$this->key = static::format_key( $key, 'construct' );
+	public function __construct( $items ) {
 
-		# Track number times construct is called.
-		static::track_constructs( $this->key );
-
-		# Set callback.
-		$this->set_callback( $callback );
-
-		# Get and set items.
-		$this->set_items();
-
-		# Set expiration.
-		$this->maybe_set_expiration( $life );
-
-		# Save.
-		$this->save();
-
-		# Do actions.
-		do_action( 'collection_constructed', $this );
-		do_action( 'collection:' . $this->key . '/constructed', $this );
-	}
-
-	/**
-	 * Getter.
-	 *
-	 * @param string $key
-	 * @uses $this->maybe_log_access()
-	 * @return mixed
-	 */
-	function __get( $key ) {
-		if ( !in_array( $key, array(
-			'key',
-			'items',
-			'source',
-			'created',
-			'access_log',
-			'expiration',
-		) ) )
-			return;
-
-		if ( 'items' === $key )
-			$this->maybe_log_access();
-
-		return $this->$key;
-	}
-
-	/**
-	 * Sleeper.
-	 *
-	 * @return array
-	 */
-	function __sleep() {
-		return array(
-			'key',
-			'items',
-			'source',
-			'created',
-			'callback',
-			'expiration',
-		);
-	}
-
-
-	/*
-	 ######  ######## ######## ######## ######## ########   ######
-	##    ## ##          ##       ##    ##       ##     ## ##    ##
-	##       ##          ##       ##    ##       ##     ## ##
-	 ######  ######      ##       ##    ######   ########   ######
-	      ## ##          ##       ##    ##       ##   ##         ##
-	##    ## ##          ##       ##    ##       ##    ##  ##    ##
-	 ######  ########    ##       ##    ######## ##     ##  ######
-	*/
-
-	/**
-	 * Set callback.
-	 *
-	 * @param mixed $callback
-	 */
-	protected function set_callback( $callback ) {
-		# Filter callback.
-		$this->callback = apply_filters( 'collection:' . $this->key . '/callback', $callback );
-
-		# If no callback set, use empty array.
-		if ( empty( $this->callback ) )
-			$this->callback = '__return_empty_array';
-
-		# Check callback is callable.
-		if ( is_callable( $this->callback ) )
-			return;
-
-		trigger_error( sprintf( 'Callback for Collection <code>%s</code> is not callable.', $this->key ) );
-		$this->callback = '__return_empty_array';
-	}
-
-	/**
-	 * Set items.
-	 *
-	 * @uses static::maybe_check_duplicates()
-	 */
-	protected function set_items() {
-		static $calls = array();
-
-		if ( !isset( $calls[$this->key] ) )
-			$calls[$this->key] = 0;
-
-		$calls[$this->key]++;
-
-		# Start timer: getting items.
-		do_action( 'qm/start', 'collection:' . $this->key . '/set_items' );
-
-		# Get items from callback.
-		$items = call_user_func( $this->callback );
-
-		# Time lap: getting items.
-		do_action( 'qm/lap', 'collection:' . $this->key . '/set_items', 'from callback' );
-
-		# Filter internal items.
-		$this->items = ( array ) apply_filters( 'collection:' . $this->key . '/_items', $items );
-
-		# Stop timer: getting items,
-		do_action( 'qm/lap',  'collection:' . $this->key . '/set_items', 'from filter' );
-		do_action( 'qm/stop', 'collection:' . $this->key . '/set_items' );
-
-		# Set created time.
-		$this->created = date_create( 'now', new DateTimeZone( 'UTC' ) );
-
-		static::maybe_check_duplicates( $this );
-
-		do_action( 'collection_curated', $this->key, $this, $calls[$this->key] );
-		do_action( 'collection:' . $this->key . '/curated', $this, $calls[$this->key] );
-	}
-
-	/**
-	 * Maybe set expiration.
-	 *
-	 * @param int $life
-	 */
-	protected function maybe_set_expiration( int $life ) {
-
-		# If life is less than one second, don't set expiration.
-		if ( $life < 1 )
-			return;
-
-		$now = date_create( 'now', new DateTimeZone( 'UTC' ) );
-		$interval = new DateInterval( 'PT' . $life . 'S' );
-		$this->expiration = $now->add( $interval );
-	}
-
-	/**
-	 * Save.
-	 *
-	 * @uses $this->save_to_cache()
-	 * @uses $this->save_to_transient()
-	 */
-	protected function save() {
-		$this->save_to_cache();
-
-		if ( is_null( $this->expiration ) )
-			return;
-
-		$this->save_to_transient();
-	}
-
-	/**
-	 * Save to WP cache.
-	 *
-	 * @uses wp_cache_add()
-	 */
-	protected function save_to_cache() {
-		$cache = clone $this;
-		$cache->source = 'object_cache';
-
-		$cached = wp_cache_add( $this->key, $cache, Collection::class, -1 );
-	}
-
-	/**
-	 * Save to transient.
-	 *
-	 * @uses static::transient_key()
-	 */
-	protected function save_to_transient() {
-		$now = date_create( 'now', new DateTimeZone( 'UTC' ) );
-		$life = $this->expiration->getTimestamp() - $now->getTimestamp();
-
-		$transient = clone $this;
-		$transient->source = 'transient';
-
-		$set = set_transient( static::transient_key( $this->key ), $transient, $life );
-	}
-
-	/**
-	 * Maybe log access.
-	 *
-	 * Log access if `LOG_COLLECTION_ACCESS` constant is true.
-	 *
-	 * @uses $this->log_access()
-	 */
-	protected function maybe_log_access() {
-		if (
-			!defined( 'LOG_COLLECTION_ACCESS' )
-			|| !LOG_COLLECTION_ACCESS
-		)
-			return;
-
-		$this->log_access();
-	}
-
-	/**
-	 * Log stack trace.
-	 */
-	protected function log_access() {
-		$log = apply_filters( 'collection/access_log', wp_debug_backtrace_summary( Collection::class ), $this );
-		$log = apply_filters( 'collection:' . $this->key . '/access_log', $log );
-
-		$microtime = microtime( true );
-
-		while ( isset( $this->access_log[( string ) $microtime] ) )
-			$microtime += 0.00001;
-
-		$this->access_log[( string ) $microtime] = $log;
-	}
-
-
-	/*
-	#### ######## ######## ##     ##  ######
-	 ##     ##    ##       ###   ### ##    ##
-	 ##     ##    ##       #### #### ##
-	 ##     ##    ######   ## ### ##  ######
-	 ##     ##    ##       ##     ##       ##
-	 ##     ##    ##       ##     ## ##    ##
-	####    ##    ######## ##     ##  ######
-	*/
-
-	/**
-	 * Get filtered (proper) items.
-	 *
-	 * @uses $this->maybe_log_access()
-	 * @return array
-	 */
-	function get_proper_items() {
-		$this->maybe_log_access();
-		return ( array ) apply_filters( 'collection:' . $this->key . '/proper_items', $this->items );
-	}
-
-	/**
-	 * Get item at specified key.
-	 *
-	 * @param mixed $key
-	 * @uses $this->maybe_log_access()
-	 * @return mixed
-	 */
-	function get_item( $key ) {
-		$this->maybe_log_access();
-		return $this->items[$key];
-	}
-
-	/**
-	 * Check item at specified key.
-	 *
-	 * @param mixed $key
-	 * @return bool
-	 */
-	function has( $key ) {
-		return isset( $this->items[$key] );
-	}
-
-	/**
-	 * Check if value in Collection.
-	 *
-	 * @param mixed $value
-	 * @param bool $strict
-	 * @return bool
-	 */
-	function contains( $value, bool $strict = true ) {
-		return in_array( $value, $this->items, $strict );
-	}
-
-	/**
-	 * Refresh items.
-	 *
-	 * @uses $this->set_items()
-	 * @return $this
-	 */
-	function refresh() {
-		$this->set_items();
-		$this->save();
-
-		do_action( 'collection_refreshed', $this );
-		do_action( 'collection:' . $this->key . '/refreshed', $this );
-
-		return $this;
 	}
 
 
@@ -581,20 +81,16 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	##     ## ##     ## ##     ## ##     ##    ##    ##     ##  ######   ######  ########  ######   ######
 	*/
 
-	function offsetExists( $offset ) {
-		return isset( $this->items[$offset] );
+	public function offsetExists( $offset ) {
+		return isset( $this->items[ $offset ] );
 	}
 
-	/**
-	 * @uses $this->maybe_log_access()
-	 */
-	function offsetGet( $offset ) {
-		$this->maybe_log_access();
-		return $this->items[$offset];
+	public function offsetGet( $offset ) {
+		return $this->items[ $offset ];
 	}
 
-	function offsetSet( $offset, $value ) {}
-	function offsetUnset( $offset ) {}
+	public function offsetSet( $offset, $value ) {}
+	public function offsetUnset( $offset ) {}
 
 
 	/*
@@ -607,7 +103,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 ######   #######   #######  ##    ##    ##    ##     ## ########  ######## ########
 	*/
 
-	function count() {
+	public function count() {
 		return count( $this->items );
 	}
 
@@ -622,24 +118,23 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	####    ##    ######## ##     ## ##     ## ########  ######## ########
 	*/
 
-	function rewind() {
-		$this->maybe_log_access();
+	public function rewind() {
 		reset( $this->items );
 	}
 
-	function current() {
+	public function current() {
 		return current( $this->items );
 	}
 
-	function key() {
+	public function key() {
 		return key( $this->items );
 	}
 
-	function next() {
+	public function next() {
 		next( $this->items );
 	}
 
-	function valid() {
+	public function valid() {
 		return null !== key( $this->items );
 	}
 
