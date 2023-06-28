@@ -66,6 +66,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$instance->log( sprintf( 'Collection::register( %s )', $key ) );
 		$instance->from_cache();
+		$instance->hooks();
 
 		static::$collections[ $key ] = $instance;
 
@@ -222,6 +223,25 @@ class Collection implements ArrayAccess, Countable, Iterator {
  	##  ##   ### ##    ##    ##    ##     ## ##   ### ##    ## ##
 	#### ##    ##  ######     ##    ##     ## ##    ##  ######  ########
 	*/
+
+	public function hooks() : void {
+		$key  = $this->key;
+		$hook = sprintf( 'Collection[ %s ]', $key );
+
+		$this->log( sprintf( 'Collection[ %s ]->hooks()', $this->key ) );
+
+		add_action( $hook . '->refresh()', static function () use ( $key ) : void {
+			Collection::get( $key )->refresh();
+		} );
+
+		add_action( $hook . '->expire()', static function () use ( $key ) : void {
+			Collection::get( $key )->expire();
+		} );
+
+		add_filter( $hook . '->items()', static function ( array $items ) use ( $key ) : array {
+			return Collection::get( $key )->items();
+		} );
+	}
 
 	/**
 	 * @return array
@@ -432,7 +452,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			return false;
 		}
 
-		do_action( 'collection_expired', $this );
+		do_action( 'collection_has_expired', $this );
 
 		return true;
 	}
@@ -443,10 +463,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	public function expire() : self {
 		$this->log( sprintf( 'Collection[ %s ]->expire()', $this->key ) );
 
-		$this->expiration = null;
+		$this->expiration = date_create();
 		$this->items      = null;
 
-		do_action( 'collection_expire', $this );
+		$this->maybe_set_cache();
+
+		do_action( 'collection_expired', $this );
 
 		return $this;
 	}
@@ -559,6 +581,18 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 }
+
+add_action( 'collection:refresh', static function ( string $key ) : void {
+	Collection::get( $key )->refresh();
+} );
+
+add_action( 'collection:expire', static function ( string $key ) : void {
+	Collection::get( $key )->expire();
+} );
+
+add_filter( 'collection:items', static function ( array $items, string $key ) : array {
+	return Collection::get( $key )->items();
+}, 10, 2 );
 
 
 /*
