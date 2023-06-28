@@ -253,6 +253,46 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
+	 * Check if item in Collection.
+	 *
+	 * @param mixed $item
+	 * @uses $this->items()
+	 * @return bool
+	 */
+	function contains( $item ) {
+		$items = $this->items();
+
+		if ( in_array( $item, $items ) ) {
+			return true;
+		}
+
+		foreach ( $items as $i ) {
+			if ( $i !== $item ) {
+				continue;
+			}
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Check Collection has item at specified key.
+	 *
+	 * @param string|int $key
+	 * @uses $this->items()
+	 * @return bool
+	 */
+	function has( $key ) {
+		if ( ! is_string( $key ) && ! is_int( $key ) ) {
+			return false;
+		}
+
+		return isset( $this->items()[ $key ] );
+	}
+
+	/**
 	 * @uses $this->callback()
 	 * @uses $this->maybe_set_cache()
 	 * @return self
@@ -434,6 +474,14 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return $returned;
 	}
 
+	protected function access_items() {
+		if ( ! is_null( $this->items ) ) {
+			return;
+		}
+
+		$this->items();
+	}
+
 
 	/*
 	   ###    ########  ########     ###    ##    ##    ###     ######   ######  ########  ######   ######
@@ -446,18 +494,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	public function offsetExists( $offset ) : bool {
-		if ( is_null( $this->items ) ) {
-			$this->items();
-		}
-
+		$this->access_items();
 		return isset( $this->items[ $offset ] );
 	}
 
 	public function offsetGet( $offset ) : mixed {
-		if ( is_null( $this->items ) ) {
-			$this->items();
-		}
-
+		$this->access_items();
 		return $this->items[ $offset ];
 	}
 
@@ -476,10 +518,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	public function count() : int {
-		if ( is_null( $this->items ) ) {
-			$this->items();
-		}
-
+		$this->access_items();
 		return count( $this->items );
 	}
 
@@ -495,22 +534,27 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	public function rewind() : void {
+		$this->access_items();
 		reset( $this->items );
 	}
 
 	public function current() : mixed {
+		$this->access_items();
 		return current( $this->items );
 	}
 
 	public function key() : mixed {
+		$this->access_items();
 		return key( $this->items );
 	}
 
 	public function next() : void {
+		$this->access_items();
 		next( $this->items );
 	}
 
 	public function valid() : bool {
+		$this->access_items();
 		return null !== key( $this->items );
 	}
 
