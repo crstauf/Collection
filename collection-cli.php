@@ -7,7 +7,7 @@ if ( ! defined( 'WP_CLI' ) || ! constant( 'WP_CLI' ) ) {
 class Collection_CLI {
 
 	public const DATE_FORMAT = 'Y-m-d H:i:s';
-	public const ALL_FIELDS = array(
+	public const ALL_FIELDS  = array(
 		'#',
 		'ID',
 		'items',
@@ -17,16 +17,40 @@ class Collection_CLI {
 		'life',
 	);
 
+	/**
+	 * @var string[]
+	 */
 	protected $registered = array();
 
+	/**
+	 * Register hooks.
+	 *
+	 * @return void
+	 */
 	public function _hooks() : void {
 		add_action( 'collection_registered', array( $this, '_action__collection_registered' ) );
 	}
 
+	/**
+	 * Action: collection_registered
+	 *
+	 * Store key of registered Collection.
+	 *
+	 * @param string $key
+	 * @return void
+	 */
 	public function _action__collection_registered( string $key ) : void {
+		if ( 'collection_registered' !== current_action() ) {
+			return;
+		}
+
 		$this->registered[] = $key;
 	}
 
+	/**
+	 * @param array<int, string> $args
+	 * @param array<string, mixed> $assoc
+	 */
 	public function list( array $args, array $assoc = array() ) : void {
 		$default_fields = array(
 			'#',
@@ -100,6 +124,10 @@ class Collection_CLI {
 		WP_CLI\Utils\format_items( $format, $rows, $fields );
 	}
 
+	/**
+	 * @param array<int, string> $args
+	 * @param array<string, mixed> $assoc
+	 */
 	public function get( array $args, array $assoc = array() ) : void {
 		$collection = Collection::get( $args[0] );
 
@@ -130,7 +158,7 @@ class Collection_CLI {
 			}
 
 			if ( 'json' === $format ) {
-				WP_CLI::line( json_encode( $collection->$field ) );
+				WP_CLI::line( ( string ) json_encode( $collection->$field ) );
 				exit;
 			}
 
@@ -189,7 +217,10 @@ class Collection_CLI {
 		WP_CLI\Utils\format_items( $format, $rows, array( 'field', 'value' ) );
 	}
 
-	public function expire( array $args ) {
+	/**
+	 * @param array<int, string> $args
+	 */
+	public function expire( array $args ) : void {
 		$collection = Collection::get( $args[0] );
 
 		if ( empty( $collection->callback ) ) {
@@ -210,7 +241,10 @@ class Collection_CLI {
 		WP_CLI::error( 'Could not expire Collection.' );
 	}
 
-	public function refresh( array $args ) {
+	/**
+	 * @param array<int, string> $args
+	 */
+	public function refresh( array $args ) : void {
 		$collection = Collection::get( $args[0] );
 
 		if ( empty( $collection->callback ) ) {

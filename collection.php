@@ -10,36 +10,79 @@
 
 /**
  * Collection.
+ *
+ * @property-read null|string $key
+ * @property-read null|DateTime $refreshed
+ * @property-read null|DateTime $expiration
+ * @property-read null|callable $callback
+ * @property-read array<mixed> $items
+ * @property-read string $source
+ * @property-read bool $debugging
+ * @property-read int $life
  */
 class Collection implements ArrayAccess, Countable, Iterator {
 
+	/**
+	 * @var Collection[]
+	 */
 	protected static $collections = array();
 
-	protected $key        = null;
-	protected $refreshed  = null;
+	/**
+	 * @var null|string
+	 */
+	protected $key = null;
+
+	/**
+	 * @var null|DateTime
+	 */
+	protected $refreshed = null;
+
+	/**
+	 * @var null|DateTime
+	 */
 	protected $expiration = null;
-	protected $callback   = null;
-	protected $items      = null;
-	protected $source     = 'runtime';
-	protected $debugging  = false;
-	protected $life       = 0;
+
+	/**
+	 * @var null|callable
+	 */
+	protected $callback = null;
+
+	/**
+	 * @var array<mixed>
+	 */
+	protected $items = null;
+
+	/**
+	 * @var string
+	 */
+	protected $source = 'runtime';
+
+	/**
+	 * @var bool
+	 */
+	protected $debugging = false;
+
+	/**
+	 * @var int
+	 */
+	protected $life = -1;
 
 
 	/*
-	 ######  ########    ###    ######## ####  ######
-	##    ##    ##      ## ##      ##     ##  ##    ##
-	##          ##     ##   ##     ##     ##  ##
-	 ######     ##    ##     ##    ##     ##  ##
-	      ##    ##    #########    ##     ##  ##
-	##    ##    ##    ##     ##    ##     ##  ##    ##
-	 ######     ##    ##     ##    ##    ####  ######
-	*/
+	 *  ######  ########    ###    ######## ####  ######
+	 * ##    ##    ##      ## ##      ##     ##  ##    ##
+	 * ##          ##     ##   ##     ##     ##  ##
+	 *  ######     ##    ##     ##    ##     ##  ##
+	 *       ##    ##    #########    ##     ##  ##
+	 * ##    ##    ##    ##     ##    ##     ##  ##    ##
+	 *  ######     ##    ##     ##    ##    ####  ######
+	 */
 
 	/**
 	 * Register Collection.
 	 *
 	 * @param string $key
-	 * @param null|array $callback
+	 * @param null|array<mixed> $callback
 	 * @param int $life
 	 * @param bool $debug
 	 * @uses $this->from_cache()
@@ -106,13 +149,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * Construct.
 	 *
-	 * @param null|array|callable $items
+	 * @param null|array<mixed>|callable $items
 	 */
 	public function __construct( $items = null ) {
-		$this->items = $items;
+		if ( is_array( $items ) ) {
+			$this->items = $items;
+		}
 
 		if ( is_callable( $items ) ) {
-			$this->items    = null;
+			$this->items    = array();
 			$this->callback = $items;
 		}
 
@@ -222,7 +267,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	*/
 
 	public function hooks() : void {
-		$key  = $this->key;
+		$key = $this->key;
+
+		if ( ! is_string( $key ) ) {
+			return;
+		}
+
 		$hook = sprintf( 'Collection[ %s ]', $key );
 
 		$this->log( sprintf( 'Collection[ %s ]->hooks()', $this->key ) );
@@ -245,7 +295,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * @return array
+	 * @return array<mixed>
 	 */
 	public function items() : array {
 		$id = sprintf( 'Collection[ %s ]->items()', $this->key );
@@ -280,7 +330,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @uses $this->items()
 	 * @return bool
 	 */
-	function contains( $item ) {
+	public function contains( $item ) {
 		$items = $this->items();
 
 		if ( in_array( $item, $items ) ) {
@@ -305,7 +355,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	 * @uses $this->items()
 	 * @return bool
 	 */
-	function has( $key ) {
+	public function has( $key ) {
 		if ( ! is_string( $key ) && ! is_int( $key ) ) {
 			return false;
 		}
@@ -321,11 +371,17 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	public function refresh() : self {
 		$this->log( sprintf( 'Collection[ %s ]->refresh()', $this->key ) );
 
+		$refreshed = date_create();
+
+		if ( empty( $refreshed ) ) {
+			$refreshed = null;
+		}
+
 		$this->items     = $this->callback();
 		$this->source    = 'runtime';
-		$this->refreshed = date_create();
+		$this->refreshed = $refreshed;
 
-		if ( ! empty( $this->life ) && $this->life > 0 ) {
+		if ( ! empty( $this->refreshed ) && ! empty( $this->life ) && $this->life > 0 ) {
 			$expiration       = clone $this->refreshed;
 			$interval         = new DateInterval( 'PT' . $this->life . 'S' );
 			$this->expiration = $expiration->add( $interval );
@@ -358,7 +414,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$this->log( sprintf( 'Collection[ %s ]->maybe_set_cache()', $this->key ) );
 
-		$value     = array(
+		$value = array(
 			'refreshed'  => $this->refreshed,
 			'expiration' => $this->expiration,
 			'items'      => $this->items,
@@ -374,7 +430,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			$result          = set_transient( $this->cache_key(), $value, $this->life );
 		}
 
-		if ( ! $result ) {
+		if ( empty( $result ) ) {
 			trigger_error( sprintf( 'Collection %s failed to set cache.', $this->key ), E_USER_WARNING );
 
 			do_action( 'collection_not_cached', $this->key, $this );
@@ -471,8 +527,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	public function expire() : self {
 		$this->log( sprintf( 'Collection[ %s ]->expire()', $this->key ) );
 
-		$this->expiration = date_create();
-		$this->items      = null;
+		$expiration = date_create();
+
+		if ( empty( $expiration ) ) {
+			$expiration = null;
+		}
+
+		$this->refreshed  = null;
+		$this->expiration = $expiration;
+		$this->items      = array();
 
 		$this->maybe_set_cache();
 
@@ -482,9 +545,9 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * @return array
+	 * @return array<mixed>
 	 */
-	protected function callback() {
+	protected function callback() : array {
 		$returned = array();
 
 		if ( is_callable( $this->callback ) ) {
@@ -504,12 +567,18 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return $returned;
 	}
 
-	protected function access_items() {
+	protected function access_items() : void {
 		if ( ! is_null( $this->items ) ) {
 			return;
 		}
 
 		$this->items();
+
+		if ( is_array( $this->items ) ) {
+			return;
+		}
+
+		$this->items = array();
 	}
 
 
@@ -533,8 +602,11 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return $this->items[ $offset ];
 	}
 
-	public function offsetSet( $offset, $value ) : void {}
-	public function offsetUnset( $offset ) : void {}
+	public function offsetSet( $offset, $value ) : void {
+	}
+
+	public function offsetUnset( $offset ) : void {
+	}
 
 
 	/*
