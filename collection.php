@@ -137,6 +137,10 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		return $this->$key;
 	}
 
+	public function __isset( string $key ) {
+		return ! empty( $this->$key );
+	}
+
 
 	/*
 	########  ######## ########  ##     ##  ######
@@ -230,7 +234,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		add_action( $hook . '->expire()', static function () use ( $key ) : void {
 			Collection::get( $key )->expire();
 		} );
-		
+
 		add_filter( $hook . '->has_expired()', static function ( bool $has_expired ) use ( $key ) : bool {
 			return Collection::get( $key )->has_expired();
 		} );
@@ -329,7 +333,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$this->maybe_set_cache();
 
-		do_action( 'collection_refreshed', $this );
+		do_action( 'collection_refreshed', $this->key, $this );
 
 		return $this;
 	}
@@ -337,7 +341,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	/**
 	 * @return string
 	 */
-	protected function cache_key() : string {
+	public function cache_key() : string {
 		return sprintf( 'collection__%s', $this->key );
 	}
 
@@ -373,12 +377,12 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		if ( ! $result ) {
 			trigger_error( sprintf( 'Collection %s failed to set cache.', $this->key ), E_USER_WARNING );
 
-			do_action( 'collection_not_cached', $this );
+			do_action( 'collection_not_cached', $this->key, $this );
 
 			return;
 		}
 
-		do_action( 'collection_cached', $this );
+		do_action( 'collection_cached', $this->key, $this );
 	}
 
 	/**
@@ -456,7 +460,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 			return false;
 		}
 
-		do_action( 'collection_has_expired', $this );
+		do_action( 'collection_has_expired', $this->key, $this );
 
 		return true;
 	}
@@ -472,7 +476,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$this->maybe_set_cache();
 
-		do_action( 'collection_expired', $this );
+		do_action( 'collection_expired', $this->key, $this );
 
 		return $this;
 	}
