@@ -108,7 +108,6 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$instance->debugging = $debug;
 
 		$instance->log( sprintf( 'Collection::register( %s )', $key ) );
-		$instance->from_cache();
 		$instance->hooks();
 
 		static::$collections[ $key ] = $instance;
@@ -275,8 +274,6 @@ class Collection implements ArrayAccess, Countable, Iterator {
 
 		$hook = sprintf( 'Collection[ %s ]', $key );
 
-		$this->log( sprintf( 'Collection[ %s ]->hooks()', $this->key ) );
-
 		add_action( $hook . '->refresh()', static function () use ( $key ) : void {
 			Collection::get( $key )->refresh();
 		} );
@@ -303,12 +300,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$this->log( $id );
 		$this->start( $id );
 
+		$this->from_cache();
+		$this->lap( $id, 'from_cache()' );
+
 		if ( $this->has_expired() ) {
 			$this->expire();
 			$this->lap( $id, 'expire()' );
 		}
 
-		if ( is_null( $this->items ) ) {
+		if ( empty( $this->refreshed ) ) {
 			$this->refresh();
 			$this->lap( $id, 'refresh()' );
 		}
@@ -371,13 +371,21 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	public function refresh() : self {
 		$this->log( sprintf( 'Collection[ %s ]->refresh()', $this->key ) );
 
+		$result = $this->callback();
+
+		if ( false === $result ) {
+			do_action( 'collection_not_refreshed', $this->key, $this );
+
+			return $this;
+		}
+
 		$refreshed = date_create();
 
 		if ( empty( $refreshed ) ) {
 			$refreshed = null;
 		}
 
-		$this->items     = $this->callback();
+		$this->items     = $result;
 		$this->source    = 'runtime';
 		$this->refreshed = $refreshed;
 
@@ -509,7 +517,7 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		}
 
 		if ( empty( $this->expiration ) ) {
-			return true;
+			return false;
 		}
 
 		if ( date_create() < $this->expiration ) {
@@ -537,7 +545,8 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		$this->expiration = $expiration;
 		$this->items      = array();
 
-		$this->maybe_set_cache();
+		delete_option( $this->cache_key() );
+		delete_transient( $this->cache_key() );
 
 		do_action( 'collection_expired', $this->key, $this );
 
@@ -545,24 +554,26 @@ class Collection implements ArrayAccess, Countable, Iterator {
 	}
 
 	/**
-	 * @return array<mixed>
+	 * @return false|array<mixed>
 	 */
-	protected function callback() : array {
+	protected function callback() {
+		$this->log( sprintf( 'Collection[ %s ]->callback()', $this->key ) );
+
 		$returned = array();
 
-		if ( is_callable( $this->callback ) ) {
-			$returned = call_user_func( $this->callback );
-		} else {
+		if ( ! is_callable( $this->callback ) ) {
 			trigger_error( sprintf( 'Callback for Collection %s is not available.', $this->key ), E_USER_WARNING );
+
+			return false;
 		}
+
+		$returned = call_user_func( $this->callback );
 
 		if ( ! is_array( $returned ) ) {
 			trigger_error( sprintf( 'Callback for Collection %s did not return an array.', $this->key ), E_USER_NOTICE );
 
-			$returned = array();
+			return false;
 		}
-
-		$this->log( sprintf( 'Collection[ %s ]->callback()', $this->key ) );
 
 		return $returned;
 	}
