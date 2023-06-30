@@ -1,0 +1,27 @@
+parameters:
+	level: 8
+	paths:
+		- collection.php
+		- collection-cli.php
+	excludePaths:
+		- vendor
+	bootstrapFiles:
+		- vendor/php-stubs/wordpress-globals/wordpress-globals.php
+		- vendor/php-stubs/wordpress-stubs/wordpress-stubs.php
+		- vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+	dynamicConstantNames:
+		- WP_CONTENT_DIR
+		- CONCATENATE_SCRIPTS
+		- COMPRESS_SCRIPTS
+		- COMPRESS_CSS
+	tmpDir: .phpstan-cache/
+	reportUnmatchedIgnoredErrors: false
+	checkGenericClassInNonGenericObjectType: false
+	ignoreErrors:
+		- '#^Function apply_filters invoked with 3 parameters, 2 required\.$#'
+		- '/^Parameter #2 \$callable of static method WP_CLI::add_command\(\) expects callable\(\): mixed, \S+ given\.$/'
+
+	checkAlwaysTrueStrictComparison: true
+
+	# Unfortunately, DocBlocks can't be relied upon in WordPress.
+	treatPhpDocTypesAsCertain: false
