@@ -8,6 +8,8 @@
  * Version: 3.0
  */
 
+defined( 'WPINC' ) || die();
+
 /**
  * Collection.
  *
@@ -115,6 +117,15 @@ class Collection implements ArrayAccess, Countable, Iterator {
 		do_action( 'collection_registered', $key, $instance );
 
 		return static::$collections[ $key ];
+	}
+
+	/**
+	 * Get registered Collections.
+	 *
+	 * @return array<string, Collection>
+	 */
+	public static function registered() : array {
+		return static::$collections;
 	}
 
 	/**

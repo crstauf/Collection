@@ -1,4 +1,14 @@
 <?php
+/**
+ * Plugin name: Collection CLI
+ * Plugin URI: https://github.com/crstauf/Collection
+ * Description: CLI commands to access Collections.
+ * Author: Caleb Stauffer
+ * Author URI: https://develop.calebstauffer.com
+ * Version: 1.0
+ */
+
+defined( 'WPINC' ) || die();
 
 if ( ! defined( 'WP_CLI' ) || ! constant( 'WP_CLI' ) ) {
 	return;
@@ -18,38 +28,56 @@ class Collection_CLI {
 	);
 
 	/**
-	 * @var string[]
-	 */
-	protected $registered = array();
-
-	/**
-	 * Register hooks.
+	 * List Collections.
 	 *
-	 * @return void
-	 */
-	public function _hooks() : void {
-		add_action( 'collection_registered', array( $this, '_action__collection_registered' ) );
-	}
-
-	/**
-	 * Action: collection_registered
+	 * ## OPTIONS
 	 *
-	 * Store key of registered Collection.
+	 * [--format=<format>]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - ids
+	 *   - json
+	 *   - count
+	 *   - yaml
+	 * ---
 	 *
-	 * @param string $key
-	 * @return void
-	 */
-	public function _action__collection_registered( string $key ) : void {
-		if ( 'collection_registered' !== current_action() ) {
-			return;
-		}
-
-		$this->registered[] = $key;
-	}
-
-	/**
+	 * [--fields=<fields>]
+	 * : Limit the output to specific object fields.
+	 *
+	 * [--orderby=<orderby>]
+	 * : Order rows by single column value.
+	 *
+	 * [--order=<order>]
+	 * : Specify ascending or descending.
+	 * ---
+	 * default: asc
+	 * options:
+	 *   - asc
+	 *   - desc
+	 * ---
+	 *
+	 * ## AVAILABLE FIELDS
+	 *
+	 * These fields will be displayed by default for each Collection:
+	 *
+	 * * # (registration order)
+	 * * ID (registration key)
+	 * * callback
+	 * * refreshed
+	 *
+	 * These fields are optionally available:
+	 *
+	 * * items
+	 * * expiration
+	 * * callback
+	 * * life
+	 *
 	 * @param array<int, string> $args
-	 * @param array<string, mixed> $assoc
+	 * @param array<string, string> $assoc
 	 */
 	public function list( array $args, array $assoc = array() ) : void {
 		$default_fields = array(
@@ -63,6 +91,10 @@ class Collection_CLI {
 		$fields  = WP_CLI\Utils\get_flag_value( $assoc, 'fields', $default_fields );
 		$orderby = WP_CLI\Utils\get_flag_value( $assoc, 'orderby', '#' );
 		$order   = strtolower( WP_CLI\Utils\get_flag_value( $assoc, 'order', 'asc' ) );
+
+		$orderby = explode( ',', $orderby );
+		$orderby = $orderby[0];
+		$orderby = trim( $orderby );
 
 		$rows = array();
 		$sort = array();
@@ -81,9 +113,9 @@ class Collection_CLI {
 			$order = SORT_DESC;
 		}
 
-		foreach ( $this->registered as $i => $key ) {
-			$collection = Collection::get( $key );
+		$i = 0;
 
+		foreach ( Collection::registered() as $key => $collection ) {
 			if ( empty( $collection->callback ) ) {
 				continue;
 			}
@@ -94,7 +126,7 @@ class Collection_CLI {
 			}
 
 			$row = array(
-				'#'          => ( $i + 1 ),
+				'#'          => ++$i,
 				'ID'         => $collection->key,
 				'refreshed'  => '',
 				'expiration' => '',
@@ -125,6 +157,42 @@ class Collection_CLI {
 	}
 
 	/**
+	 * Gets details about a Collection.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : The key of the registered Collection to get.
+	 *
+	 * [--format=<format>]
+	 * : Render output in a particular format.
+	 * ---
+	 * default: table
+	 * options:
+	 *   - table
+	 *   - csv
+	 *   - ids
+	 *   - json
+	 *   - count
+	 *   - yaml
+	 * ---
+	 *
+	 * [--field=<field>]
+	 * : Instead of returning the whole Collection, returns the value of a single property.
+	 *
+	 * [--fields=<fields>]
+	 * : Limit the output to specific object fields.
+	 *
+	 * ## AVAILABLE FIELDS
+	 *
+	 * * # (registration order)
+	 * * ID (registration key)
+	 * * items
+	 * * refreshed
+	 * * expiration
+	 * * callback
+	 * * life
+	 *
 	 * @param array<int, string> $args
 	 * @param array<string, mixed> $assoc
 	 */
@@ -218,6 +286,13 @@ class Collection_CLI {
 	}
 
 	/**
+	 * Expire a Collection's items.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : The key of the registered Collection to expire.
+	 *
 	 * @param array<int, string> $args
 	 */
 	public function expire( array $args ) : void {
@@ -242,6 +317,13 @@ class Collection_CLI {
 	}
 
 	/**
+	 * Refresh a Collection's items.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <key>
+	 * : The key of the registered Collection to refresh.
+	 *
 	 * @param array<int, string> $args
 	 */
 	public function refresh( array $args ) : void {
@@ -267,7 +349,12 @@ class Collection_CLI {
 
 }
 
-$cli = new Collection_CLI();
-$cli->_hooks();
+add_action( 'muplugins_loaded', static function () : void {
+	if ( ! class_exists( 'Collection' ) ) {
+		return;
+	}
 
-WP_CLI::add_command( 'collection', $cli );
+	$cli = new Collection_CLI();
+
+	WP_CLI::add_command( 'collection', $cli );
+} );
